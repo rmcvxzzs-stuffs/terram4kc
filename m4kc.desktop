@@ -1,7 +1,7 @@
 [Desktop Entry]
-Name=m4kc
-Comment=Minecraft 4k: decompiled, translated to C, and improved upon 
-Exec=m4kc
+Name=mcvoxel
+Comment=Minecraft Voxel: an improvement of M4KC
+Exec=mcv
 Icon=/usr/share/icons/hicolor/256x256/apps/m4kc.png
 Terminal=false
 Type=Application
