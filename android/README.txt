@@ -1,0 +1,1 @@
+hello! i havent added a true mobile support so come here when its added! feel free to contribute as well.
