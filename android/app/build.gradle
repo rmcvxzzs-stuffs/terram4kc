@@ -1,5 +1,5 @@
-plugins {
-     id 'com.android.application'
+defaultConfig {
+    applicationId "com.rmcvxzz.mcvoxel" // my app :D
 }
 
 def buildWithCMake = project.hasProperty('BUILD_WITH_CMAKE');
