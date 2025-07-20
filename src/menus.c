@@ -21,16 +21,21 @@ int state_title (SDL_Renderer *renderer, Inputs *inputs, int *gameState) {
         white(renderer);
         drawBig (
                 renderer,
-                "M4KC",
+                "Minecraft Voxel",
                 BUFFER_HALF_W,
                 16
         );
 
-        #ifdef small
-        shadowStr(renderer, "version 0.7", 1, BUFFER_H - 9);
+        #ifdef __ANDROID__
+            shadowStr(renderer, "[TEMP] 0.0.1", 1, BUFFER_H - 9);
         #else
-        shadowStr(renderer, "version 0.7 (dev build)", 1, BUFFER_H - 9);
+            #ifdef small
+                shadowStr(renderer, "[DEV] 0.0.1", 1, BUFFER_H - 9);
+            #else
+                shadowStr(renderer, "0.0.1", 1, BUFFER_H - 9);
+            #endif
         #endif
+        
 
         if (button(renderer, "Singleplayer",
                 BUFFER_HALF_W - 64, 42, 128,
