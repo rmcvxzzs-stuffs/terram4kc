@@ -2,7 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.rmcvxzz">
 
-    <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="29" />
+    <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="35" />
     <uses-feature android:glEsVersion="0x00020000" android:required="true"/>
 
     <application
@@ -11,7 +11,7 @@
         android:theme="@android:style/Theme.NoTitleBar.Fullscreen">
         <activity
             android:name="com.rmcvxzz.mcvoxel"
-            android:label="M4KC"
+            android:label="MC Voxel"
             android:launchMode="singleInstance"
             android:configChanges="orientation|screenSize|keyboardHidden">
             <intent-filter>
