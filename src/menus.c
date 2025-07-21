@@ -26,7 +26,7 @@ int state_title (SDL_Renderer *renderer, Inputs *inputs, int *gameState) {
                 16
         );
 
-        #ifdef __ANDROID__
+        #ifdef __ANDROID__ // android
             shadowStr(renderer, "[TEMP] 0.0.1", 1, BUFFER_H - 9);
         #else
             #ifdef small
