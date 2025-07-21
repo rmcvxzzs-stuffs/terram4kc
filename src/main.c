@@ -47,7 +47,7 @@ int main (int argc, char *argv[]) {
                 goto exit;
         }
 
-        window = SDL_CreateWindow ("M4KC",
+        window = SDL_CreateWindow ("Minecraft Voxel",
                 SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
                 WINDOW_W, WINDOW_H,
                 SDL_WINDOW_SHOWN
