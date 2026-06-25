@@ -13,6 +13,9 @@
 #define STATE_EDIT_WORLD   6
 #define STATE_JOIN_GAME    7
 #define STATE_OPTIONS      8
+#define STATE_MULTIPLAYER  9
+#define STATE_SERVER_LIST  10
+#define STATE_HOST_SERVER  11
 
 #define POPUP_HUD            0
 #define POPUP_PAUSE          1
@@ -27,6 +30,9 @@
 int  state_title       (SDL_Renderer *, Inputs *, int *);
 void state_selectWorld (SDL_Renderer *, Inputs *, int *, World *);
 void state_newWorld    (SDL_Renderer *, Inputs *, int *, World *);
+void state_multiplayer (SDL_Renderer *, Inputs *, int *);
+void state_serverList  (SDL_Renderer *, Inputs *, int *, World *);
+void state_hostServer  (SDL_Renderer *, Inputs *, int *, World *);
 int  state_loading     (SDL_Renderer *, World *, unsigned int, Coords);
 void state_options     (SDL_Renderer *, Inputs *, int *);
 void state_egg         (SDL_Renderer *, Inputs *, int *);

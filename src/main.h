@@ -3,6 +3,8 @@
 #include <SDL2/SDL.h>
 #include <stdlib.h>
 
+extern int g_debug_mode;
+
 /* InputKeys
  * Stores only key presses. Reset to zero every frame.
  */

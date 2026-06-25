@@ -1,9 +1,0 @@
-[Desktop Entry]
-Name=mcvoxel
-Comment=Minecraft Voxel: an improvement of M4KC
-Exec=mcv
-Icon=/usr/share/icons/hicolor/256x256/apps/m4kc.png
-Terminal=false
-Type=Application
-Categories=Game
-Keywords=Game;Minecraft;Voxel

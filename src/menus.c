@@ -4,8 +4,21 @@
 #include "blocks.h"
 #include "options.h"
 #include "gameloop.h"
+#include "audio.h"
+#include "net.h"
 
 static int menu_optionsMain (SDL_Renderer *, Inputs *);
+
+/* mouseClicked
+ * Detects a rising edge on the left mouse button (0 -> 1 transition).
+ * Used to play click sounds only once per actual button press.
+ */
+static int mouseClicked(Inputs *inputs) {
+	static int prevMouseLeft = 0;
+	int clicked = inputs->mouse.left && !prevMouseLeft;
+	prevMouseLeft = inputs->mouse.left;
+	return clicked;
+}
 
 /* === GAME STATES === */
 
@@ -21,27 +34,28 @@ int state_title (SDL_Renderer *renderer, Inputs *inputs, int *gameState) {
         white(renderer);
         drawBig (
                 renderer,
-                "Minecraft Voxel",
+                "TerraM4KC",
                 BUFFER_HALF_W,
-                16
+                6
         );
 
         #ifdef __ANDROID__ // android
-            shadowStr(renderer, "[TEMP] 0.0.1", 1, BUFFER_H - 9);
+            shadowStr(renderer, "[TEMP] 0.1.0", 1, BUFFER_H - 9);
         #else
             #ifdef small
-                shadowStr(renderer, "[DEV] 0.0.1", 1, BUFFER_H - 9);
+                shadowStr(renderer, "[DEV] 0.1.0", 1, BUFFER_H - 9);
             #else
-                shadowStr(renderer, "0.0.1", 1, BUFFER_H - 9);
+                shadowStr(renderer, "0.1.0", 1, BUFFER_H - 9);
             #endif
         #endif
         
 
         if (button(renderer, "Singleplayer",
-                BUFFER_HALF_W - 64, 42, 128,
+                BUFFER_HALF_W - 64, 22, 128,
                 inputs->mouse.x, inputs->mouse.y) &&
-                inputs->mouse.left
+                mouseClicked(inputs)
         ) {
+                	audio_play_click();
                 if (data_refreshWorldList()) {
                         gameLoop_error("Cannot refresh world list");
                 } else {
@@ -50,22 +64,78 @@ int state_title (SDL_Renderer *renderer, Inputs *inputs, int *gameState) {
         }
 
         if (button(renderer, "Options",
-                BUFFER_HALF_W - 64, 64, 128,
+                BUFFER_HALF_W - 64, 44, 128,
                 inputs->mouse.x, inputs->mouse.y) &&
-                inputs->mouse.left
+                mouseClicked(inputs)
         ) {
+                	audio_play_click();
                 *gameState = STATE_OPTIONS;
         }
 
-        if (button(renderer, "Quit Game",
-                BUFFER_HALF_W - 64, 86, 128,
+        
+	if (button(renderer, "Multiplayer",
+			BUFFER_HALF_W - 64, 66, 128,
+			inputs->mouse.x, inputs->mouse.y) &&
+			mouseClicked(inputs)
+	) {
+			audio_play_click();
+		*gameState = STATE_MULTIPLAYER;
+	}
+
+	if (button(renderer, "Quit Game",
+                BUFFER_HALF_W - 64, 88, 128,
                 inputs->mouse.x, inputs->mouse.y) &&
-                inputs->mouse.left
+                mouseClicked(inputs)
         ) {
+                	audio_play_click();
                 return 1;
         }
 
         return 0;
+}
+
+
+/* state_multiplayer
+ * Shows multiplayer options: Join or Host.
+ */
+void state_multiplayer (
+	SDL_Renderer *renderer,
+	Inputs *inputs,
+	int *gameState
+) {
+	inputs->mouse.x /= BUFFER_SCALE;
+	inputs->mouse.y /= BUFFER_SCALE;
+
+	dirtBg(renderer);
+	white(renderer);
+	drawBig(renderer, "Multiplayer", BUFFER_HALF_W, 16);
+
+	if (button(renderer, "Join Game",
+			BUFFER_HALF_W - 64, 42, 128,
+			inputs->mouse.x, inputs->mouse.y) &&
+			mouseClicked(inputs)
+	) {
+			audio_play_click();
+		*gameState = STATE_SERVER_LIST;
+	}
+
+	if (button(renderer, "Host Server",
+			BUFFER_HALF_W - 64, 64, 128,
+			inputs->mouse.x, inputs->mouse.y) &&
+			mouseClicked(inputs)
+	) {
+			audio_play_click();
+		*gameState = STATE_HOST_SERVER;
+	}
+
+	if (button(renderer, "Cancel",
+			BUFFER_HALF_W - 64, 86, 128,
+			inputs->mouse.x, inputs->mouse.y) &&
+			mouseClicked(inputs)
+	) {
+			audio_play_click();
+		*gameState = STATE_TITLE;
+	}
 }
 
 void state_selectWorld (
@@ -160,8 +230,9 @@ void state_selectWorld (
         if (button(renderer, "Cancel",
                 BUFFER_HALF_W - 64, BUFFER_H - 22, 61,
                 inputs->mouse.x, inputs->mouse.y) &&
-                inputs->mouse.left
+                mouseClicked(inputs)
         ) {
+                	audio_play_click();
                 *gameState = STATE_TITLE;
                 scroll = 0;
         }
@@ -169,8 +240,9 @@ void state_selectWorld (
         if (button(renderer, "New",
                 BUFFER_HALF_W + 3, BUFFER_H - 22, 61,
                 inputs->mouse.x, inputs->mouse.y) &&
-                inputs->mouse.left
+                mouseClicked(inputs)
         ) {
+                	audio_play_click();
                 *gameState = STATE_NEW_WORLD;
                 scroll = 0;
         }
@@ -193,6 +265,68 @@ const char *dayNightModes[16] = {
         "Always Day",
         "Always Night",
 };
+
+
+/* state_serverList
+ * Shows a server list menu for joining multiplayer games.
+ * Similar to world select but for entering IP addresses.
+ */
+void state_serverList (
+	SDL_Renderer *renderer,
+	Inputs *inputs,
+	int *gameState,
+	World *world
+) {
+	static char ipBuffer[32] = "localhost";
+	static InputBuffer ipInput = {
+		.buffer = ipBuffer,
+		.len    = 32,
+		.cursor = 0
+	};
+	static int connecting = 0;
+
+	inputs->mouse.x /= BUFFER_SCALE;
+	inputs->mouse.y /= BUFFER_SCALE;
+
+	dirtBg(renderer);
+	white(renderer);
+	drawBig(renderer, "Join Server", BUFFER_HALF_W, 16);
+
+	if (connecting) {
+		shadowCenterStr(renderer, "Connecting...", BUFFER_HALF_W, BUFFER_HALF_H);
+		if (net_init_join(ipBuffer, NET_PORT) == 0) {
+			connecting = 0;
+			*gameState = STATE_LOADING;
+		} else {
+			connecting = 0;
+			gameLoop_error("Failed to connect to server");
+		}
+	} else {
+		manageInputBuffer(&ipInput, inputs);
+		input(renderer, "Server IP", ipInput.buffer,
+			BUFFER_HALF_W - 64, 42, 128,
+			inputs->mouse.x, inputs->mouse.y, 1);
+
+		if (button(renderer, "Connect",
+				BUFFER_HALF_W - 64, 64, 128,
+				inputs->mouse.x, inputs->mouse.y) &&
+				mouseClicked(inputs)
+		) {
+				audio_play_click();
+			connecting = 1;
+		}
+	}
+
+	if (button(renderer, "Cancel",
+			BUFFER_HALF_W - 64, 86, 128,
+			inputs->mouse.x, inputs->mouse.y) &&
+			mouseClicked(inputs)
+	) {
+			audio_play_click();
+		*gameState = STATE_TITLE;
+		connecting = 0;
+	}
+}
 
 /* state_newWorld
  * Shows a menu with editable parameters for creating a new world. Capable of
@@ -233,8 +367,9 @@ void state_newWorld (
         if (input(renderer, "Name", nameInput.buffer,
                 BUFFER_HALF_W - 64, 8, 128,
                 inputs->mouse.x, inputs->mouse.y, whichInput == 0) &&
-                inputs->mouse.left
+                mouseClicked(inputs)
         ) {
+                	audio_play_click();
                 whichInput = 0;
         }
 
@@ -247,16 +382,18 @@ void state_newWorld (
         if (input(renderer, "Seed", seedInput.buffer,
                 BUFFER_HALF_W - 64, 30, 128,
                 inputs->mouse.x, inputs->mouse.y, whichInput == 1) &&
-                inputs->mouse.left
+                mouseClicked(inputs)
         ) {
+                	audio_play_click();
                 whichInput = 1;
         }
         
         if (button(renderer, terrainNames[typeSelect],
                 BUFFER_HALF_W - 64, 52, 128,
                 inputs->mouse.x, inputs->mouse.y) &&
-                inputs->mouse.left
+                mouseClicked(inputs)
         ) {
+                	audio_play_click();
                 typeSelect = (typeSelect + 1) % 5;
         }
 
@@ -264,24 +401,27 @@ void state_newWorld (
         if (button(renderer, dayNightModes[dayNightSelect],
                 BUFFER_HALF_W - 64, 74, 128,
                 inputs->mouse.x, inputs->mouse.y) &&
-                inputs->mouse.left
+                mouseClicked(inputs)
         ) {
+                	audio_play_click();
                 dayNightSelect = (dayNightSelect + 1) % 3;
         }
 
         if (button(renderer, "Cancel",
                 BUFFER_HALF_W - 64, 96, 61,
                 inputs->mouse.x, inputs->mouse.y) &&
-                inputs->mouse.left
+                mouseClicked(inputs)
         ) {
+                	audio_play_click();
                 *gameState = STATE_SELECT_WORLD;
         }
 
         if (button(renderer, "Generate",
                 BUFFER_HALF_W + 3, 96, 61,
                 inputs->mouse.x, inputs->mouse.y) &&
-                inputs->mouse.left
+                mouseClicked(inputs)
         ) {
+                	audio_play_click();
                 // Reject empty names and names with slashes
                 if (nameInput.buffer[0] == 0) {
                         goto cantMakeWorld;
@@ -339,6 +479,161 @@ void state_newWorld (
         nameInput.buffer[0] = 0;
         nameInput.cursor    = 0;
         badName             = 1;
+}
+
+
+/* state_hostServer
+ * Shows a world creation menu for hosting a multiplayer server.
+ * Similar to new world but starts a server instead of generating locally.
+ */
+void state_hostServer (
+	SDL_Renderer *renderer,
+	Inputs *inputs,
+	int *gameState,
+	World *world
+) {
+	static int badName = 0;
+	static int whichInput = 0;
+	static int typeSelect = 1;
+	static int dayNightSelect = 0;
+
+	static char seedBuffer[16];
+	static InputBuffer seedInput = {
+		.buffer = seedBuffer,
+		.len    = 16,
+		.cursor = 0
+	};
+
+	static char nameBuffer[16];
+	static InputBuffer nameInput = {
+		.buffer = nameBuffer,
+		.len    = 16,
+		.cursor = 0
+	};
+
+	inputs->mouse.x /= BUFFER_SCALE;
+	inputs->mouse.y /= BUFFER_SCALE;
+
+	dirtBg(renderer);
+
+	if (whichInput == 0) { manageInputBuffer(&nameInput, inputs); }
+	if (input(renderer, "World Name", nameInput.buffer,
+			BUFFER_HALF_W - 64, 8, 128,
+			inputs->mouse.x, inputs->mouse.y, whichInput == 0) &&
+			mouseClicked(inputs)
+	) {
+			audio_play_click();
+		whichInput = 0;
+	}
+
+	if (badName) {
+		SDL_SetRenderDrawColor(renderer, 255, 128, 128, 255);
+		drawChar(renderer, '!', BUFFER_HALF_W + 70, 12);
+	}
+
+	if (whichInput == 1) { manageInputBuffer(&seedInput, inputs); }
+	if (input(renderer, "Seed", seedInput.buffer,
+			BUFFER_HALF_W - 64, 30, 128,
+			inputs->mouse.x, inputs->mouse.y, whichInput == 1) &&
+			mouseClicked(inputs)
+	) {
+			audio_play_click();
+		whichInput = 1;
+	}
+
+	if (button(renderer, terrainNames[typeSelect],
+			BUFFER_HALF_W - 64, 52, 128,
+			inputs->mouse.x, inputs->mouse.y) &&
+			mouseClicked(inputs)
+	) {
+			audio_play_click();
+		typeSelect = (typeSelect + 1) % 5;
+	}
+
+	if (button(renderer, dayNightModes[dayNightSelect],
+			BUFFER_HALF_W - 64, 74, 128,
+			inputs->mouse.x, inputs->mouse.y) &&
+			mouseClicked(inputs)
+	) {
+			audio_play_click();
+		dayNightSelect = (dayNightSelect + 1) % 3;
+	}
+
+	if (button(renderer, "Cancel",
+			BUFFER_HALF_W - 64, 96, 61,
+			inputs->mouse.x, inputs->mouse.y) &&
+			mouseClicked(inputs)
+	) {
+			audio_play_click();
+		*gameState = STATE_TITLE;
+	}
+
+	if (button(renderer, "Start Server",
+			BUFFER_HALF_W + 3, 96, 61,
+			inputs->mouse.x, inputs->mouse.y) &&
+			mouseClicked(inputs)
+	) {
+			audio_play_click();
+		// Reject empty names and names with slashes
+		if (nameInput.buffer[0] == 0) {
+			goto cantHostServer;
+		}
+		for (int index = 0; nameInput.buffer[index]; index++) {
+			if (nameInput.buffer[index] == '/') {
+				goto cantHostServer;
+			}
+		}
+
+		if (data_getWorldPath(world->path, nameInput.buffer)) {
+			goto cantHostServer;
+		}
+
+		if (data_directoryExists(world->path)) {
+			// Load existing world
+			if (World_load(world, nameInput.buffer)) {
+				goto cantHostServer;
+			}
+		} else {
+			// Create new world
+			world->time = 2048;
+			world->type = typeSelect;
+			world->dayNightMode = dayNightSelect;
+
+			world->seed = 0;
+			for (int index = 0; seedInput.buffer[index]; index++) {
+				world->seed *= 10;
+				world->seed += seedInput.buffer[index] - '0';
+			}
+			if (world->seed == 0) {
+				world->seed = time(0) % 999999999999999;
+			}
+			if (world->seed == 5800) {
+				world->type = -1;
+			}
+		}
+
+		// Start the server
+		if (net_init_host(NET_PORT, nameInput.buffer) != 0) {
+			gameLoop_error("Failed to start server");
+			return;
+		}
+
+		whichInput = 0;
+		seedInput.buffer[0] = 0;
+		seedInput.cursor = 0;
+		nameInput.buffer[0] = 0;
+		nameInput.cursor = 0;
+		badName = 0;
+
+		*gameState = STATE_LOADING;
+	}
+
+	return;
+
+	cantHostServer:
+	nameInput.buffer[0] = 0;
+	nameInput.cursor = 0;
+	badName = 1;
 }
 
 /* state_loading
@@ -416,8 +711,9 @@ void state_egg (SDL_Renderer *renderer, Inputs *inputs, int *gameState) {
         if (button(renderer, "Ok",
                 BUFFER_HALF_W - 64, BUFFER_HALF_H, 128,
                 inputs->mouse.x, inputs->mouse.y) &&
-                inputs->mouse.left
+                mouseClicked(inputs)
         ) {
+                	audio_play_click();
                 *gameState = STATE_TITLE;
         }
 }
@@ -447,8 +743,9 @@ int state_err (SDL_Renderer *renderer, Inputs *inputs, char *message) {
         if (button(renderer, "Ok",
                 BUFFER_HALF_W - 64, BUFFER_HALF_H + 16, 128,
                 inputs->mouse.x, inputs->mouse.y) &&
-                inputs->mouse.left
+                mouseClicked(inputs)
         ) {
+                	audio_play_click();
                 return 1;
         }
         return 0;
@@ -625,7 +922,8 @@ void manageInvSlot (
                 x, y,
                 inputs->mouse.x,
                 inputs->mouse.y
-        ) && inputs->mouse.left) {
+        ) && mouseClicked(inputs)) {
+        	audio_play_click();
                 inputs->mouse.left = 0;
                 if (*dragging) {
                         // Place down item
@@ -812,24 +1110,27 @@ void popup_pause (
         if (button(renderer, "Back to Game",
                 BUFFER_HALF_W - 64, 20, 128,
                 inputs->mouse.x, inputs->mouse.y) &&
-                inputs->mouse.left
+                mouseClicked(inputs)
         ) {
+                	audio_play_click();
                 *gamePopup = POPUP_HUD;
         }
 
         if (button(renderer, "Options...",
                 BUFFER_HALF_W - 64, 42, 128,
                 inputs->mouse.x, inputs->mouse.y) &&
-                inputs->mouse.left
+                mouseClicked(inputs)
         ) {
+                	audio_play_click();
                 *gamePopup = POPUP_OPTIONS;
         }
 
         if (button(renderer, "Save and Quit",
                 BUFFER_HALF_W - 64, 64, 128,
                 inputs->mouse.x, inputs->mouse.y) &&
-                inputs->mouse.left
+                mouseClicked(inputs)
         ) {
+                	audio_play_click();
                 int err = World_save(world);
                 if (err) {
                         gameLoop_error("Could not save world");
@@ -859,32 +1160,36 @@ void popup_debugTools (SDL_Renderer *renderer, Inputs *inputs, int *gamePopup) {
         if (button(renderer, "Chunk Peek",
                 BUFFER_HALF_W - 64, 20, 128,
                 inputs->mouse.x, inputs->mouse.y) &&
-                inputs->mouse.left
+                mouseClicked(inputs)
         ) {
+                	audio_play_click();
                 *gamePopup = POPUP_CHUNK_PEEK;
         }
         
         if (button(renderer, "All Chunks",
                 BUFFER_HALF_W - 64, 42, 128,
                 inputs->mouse.x, inputs->mouse.y) &&
-                inputs->mouse.left
+                mouseClicked(inputs)
         ) {
+                	audio_play_click();
                 *gamePopup = POPUP_ROLL_CALL;
         }
         
         if (button(renderer, "World overview",
                 BUFFER_HALF_W - 64, 64, 128,
                 inputs->mouse.x, inputs->mouse.y) &&
-                inputs->mouse.left
+                mouseClicked(inputs)
         ) {
+                	audio_play_click();
                 *gamePopup = POPUP_OVERVIEW;
         }
 
         if (button(renderer, "Done",
                 BUFFER_HALF_W - 64, 86, 128,
                 inputs->mouse.x, inputs->mouse.y) &&
-                inputs->mouse.left
+                mouseClicked(inputs)
         ) {
+                	audio_play_click();
                 *gamePopup = POPUP_HUD;
         }
 }
@@ -947,16 +1252,18 @@ void popup_chunkPeek (
                 if (button(renderer, "UP",
                         4, 56, 64,
                         inputs->mouse.x, inputs->mouse.y)
-                        && inputs->mouse.left
+                        && mouseClicked(inputs)
                 ) {
+                        	audio_play_click();
                         chunkPeekRYMax = nmod(chunkPeekRYMax - 1, 64);
                 }
 
                 if (button(renderer, "DOWN",
                         4, 78, 64,
                         inputs->mouse.x, inputs->mouse.y)
-                        && inputs->mouse.left
+                        && mouseClicked(inputs)
                 ) {
+                        	audio_play_click();
                         chunkPeekRYMax = nmod(chunkPeekRYMax + 1, 64);
                 }
 
@@ -1026,8 +1333,9 @@ void popup_chunkPeek (
         if (button(renderer, "Done",
                 4, 100, 64,
                 inputs->mouse.x, inputs->mouse.y)
-                && inputs->mouse.left
+                && mouseClicked(inputs)
         ) {
+                	audio_play_click();
                 *gamePopup = POPUP_ADVANCED_DEBUG;
         }
 }
@@ -1074,8 +1382,9 @@ void popup_rollCall (
         if (button(renderer, "Done",
                 BUFFER_W - 6 - 32, 6, 32,
                 inputs->mouse.x, inputs->mouse.y)
-                && inputs->mouse.left
+                && mouseClicked(inputs)
         ) {
+                	audio_play_click();
                 *gamePopup = POPUP_ADVANCED_DEBUG;
         }
 }
@@ -1128,8 +1437,9 @@ void popup_overview (
         if (button(renderer, "Done",
                 BUFFER_W - 6 - 32, 6, 32,
                 inputs->mouse.x, inputs->mouse.y)
-                && inputs->mouse.left
+                && mouseClicked(inputs)
         ) {
+                	audio_play_click();
                 *gamePopup = POPUP_ADVANCED_DEBUG;
         }
 }
@@ -1158,8 +1468,9 @@ static int menu_optionsMain (SDL_Renderer *renderer, Inputs *inputs) {
                 if (button(renderer, trapMouseTexts[options.trapMouse],
                         BUFFER_HALF_W - 64, 42, 128,
                         inputs->mouse.x, inputs->mouse.y) &&
-                        inputs->mouse.left
+                        mouseClicked(inputs)
                 ) {
+                        	audio_play_click();
                         options.trapMouse = !options.trapMouse;
                 }
                 break;
@@ -1175,8 +1486,9 @@ static int menu_optionsMain (SDL_Renderer *renderer, Inputs *inputs) {
                 if (button(renderer, drawDistanceText,
                         BUFFER_HALF_W - 64, 20, 128,
                         inputs->mouse.x, inputs->mouse.y) &&
-                        inputs->mouse.left
+                        mouseClicked(inputs)
                 ) {
+                        	audio_play_click();
                         switch (options.drawDistance) {
                         case 20:
                                 options.drawDistance = 32;
@@ -1214,8 +1526,9 @@ static int menu_optionsMain (SDL_Renderer *renderer, Inputs *inputs) {
                 if (button(renderer, fovText,
                         BUFFER_HALF_W - 64, 42, 128,
                         inputs->mouse.x, inputs->mouse.y) &&
-                        inputs->mouse.left
+                        mouseClicked(inputs)
                 ) {
+                        	audio_play_click();
                         switch ((int)options.fov) {
                                 case 60: options.fov = 140; break;
                                 case 90: options.fov = 60;  break;
@@ -1231,8 +1544,9 @@ static int menu_optionsMain (SDL_Renderer *renderer, Inputs *inputs) {
                 if (button(renderer, fogTexts[options.fogType],
                         BUFFER_HALF_W - 64, 64, 128,
                         inputs->mouse.x, inputs->mouse.y) &&
-                        inputs->mouse.left
+                        mouseClicked(inputs)
                 ) {
+                        	audio_play_click();
                         options.fogType = !options.fogType;
                 }
                 
@@ -1242,8 +1556,9 @@ static int menu_optionsMain (SDL_Renderer *renderer, Inputs *inputs) {
         if (button(renderer, "<",
                 BUFFER_HALF_W - 86, 20, 16,
                 inputs->mouse.x, inputs->mouse.y) &&
-                inputs->mouse.left
+                mouseClicked(inputs)
         ) {
+                	audio_play_click();
                 page --;
                 page = nmod(page, 2);
         }
@@ -1251,8 +1566,9 @@ static int menu_optionsMain (SDL_Renderer *renderer, Inputs *inputs) {
         if (button(renderer, ">",
                 BUFFER_HALF_W + 70, 20, 16,
                 inputs->mouse.x, inputs->mouse.y) &&
-                inputs->mouse.left
+                mouseClicked(inputs)
         ) {
+                	audio_play_click();
                 page ++;
                 page = nmod(page, 2);
         }
@@ -1260,8 +1576,9 @@ static int menu_optionsMain (SDL_Renderer *renderer, Inputs *inputs) {
         if (button(renderer, "Done",
                 BUFFER_HALF_W - 64, 86, 128,
                 inputs->mouse.x, inputs->mouse.y) &&
-                inputs->mouse.left
+                mouseClicked(inputs)
         ) {
+                	audio_play_click();
                 int err = options_save();
                 if (err) {
                         gameLoop_error("Could not save options");
