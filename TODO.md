@@ -14,4 +14,4 @@
 - Audio support [x] 
 - Biome generation []
 - Actual player models with textures [-]
-- 
+- Localization [-]
