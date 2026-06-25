@@ -25,4 +25,5 @@ Simply, i am not affiliated with Sasha Koshka nor Mojang Studios.
 - Expect the executable file to be above 1mb, as i integrated ImGui.
 - There's an unused [`dpad.h`](./src/android/dpad.h). it is there as a placeholder for now.
 - Help TerraM4KC go [global](https://poeditor.com/join/project/Hf0xcxYF7q) by clicking on the link!
+
 ~~[You can click this to see the instruction on how to build.](https://github.com/sashakoshka/m4kc/wiki/Building-From-Source)~~ Check [BUILDING.md](/BUILDING.md).
