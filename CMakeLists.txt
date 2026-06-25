@@ -243,6 +243,29 @@ if(WIN32)
             COMMENT "Copying discord-rpc.dll"
         )
     endif()
+
+    # Copy MinGW runtime DLLs (needed when linking C++)
+    foreach(MINGW_DLL
+        libgcc_s_seh-1.dll
+        libstdc++-6.dll
+        libwinpthread-1.dll
+    )
+        find_file(MINGW_DLL_PATH_${MINGW_DLL} ${MINGW_DLL}
+            PATHS
+                "C:/msys64/mingw64/bin"
+                "C:/mingw64/bin"
+                "C:/mingw/bin"
+            NO_DEFAULT_PATH
+        )
+        if(MINGW_DLL_PATH_${MINGW_DLL})
+            add_custom_command(TARGET m4kc POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${MINGW_DLL_PATH_${MINGW_DLL}}"
+                ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+                COMMENT "Copying ${MINGW_DLL}"
+            )
+        endif()
+    endforeach()
 endif()
 
 # Temporary console mode

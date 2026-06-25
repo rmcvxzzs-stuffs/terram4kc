@@ -320,11 +320,15 @@ static void gameLoop_gameplay (SDL_Renderer *renderer, Inputs *inputs) {
   }
 
   if (g_debug_mode) {
-    g_imgui_debug.fps           = fps_now;
+    g_imgui_debug.fps          = fps_now;
     g_imgui_debug.blockSelected = blockSelected;
-    g_imgui_debug.blockX        = blockSelect.x;
-    g_imgui_debug.blockY        = blockSelect.y;
-    g_imgui_debug.blockZ        = blockSelect.z;
+    g_imgui_debug.blockX       = blockSelect.x;
+    g_imgui_debug.blockY       = blockSelect.y;
+    g_imgui_debug.blockZ       = blockSelect.z;
+    g_imgui_debug.headInWater  = headInWater;
+    g_imgui_debug.feetInWater  = feetInWater;
+    g_imgui_debug.velFB        = player->FBVelocity;
+    g_imgui_debug.velLR        = player->LRVelocity;
   }
 
   /* Things that should run at a constant speed, regardless
@@ -737,55 +741,6 @@ void gameLoop_drawPopup (SDL_Renderer *renderer, Inputs *inputs) {
       renderer, inputs, &world,
       &debugOn, &fps_now, player
     );
-
-    // ImGui debug overlay (--debug flag)
-    if (g_debug_mode) {
-      ImGui_Begin("TerraM4KC Debug", NULL, 0);
-
-      // Performance
-      if (ImGui_CollapsingHeader("Performance", 1)) {
-        ImGui_Text("FPS: %d", fps_now);
-        ImGui_Text("Frame time: %.2f ms", fps_now > 0 ? 1000.0f / fps_now : 0.0f);
-      }
-
-      // Player
-      if (ImGui_CollapsingHeader("Player", 1)) {
-        ImGui_Text("Pos:  X=%.2f  Y=%.2f  Z=%.2f",
-          player->pos.x, player->pos.y, player->pos.z);
-        ImGui_Text("Chunk: X=%d  Y=%d  Z=%d",
-          (int)floor(player->pos.x) >> 6,
-          (int)floor(player->pos.y) >> 6,
-          (int)floor(player->pos.z) >> 6);
-        ImGui_Text("hRot: %.2f rad  vRot: %.2f rad",
-          player->hRot, player->vRot);
-        ImGui_Text("hRot: %.1f deg  vRot: %.1f deg",
-          player->hRot * (180.0 / 3.14159265),
-          player->vRot * (180.0 / 3.14159265));
-        ImGui_Text("VecH: X=%.3f  Y=%.3f",
-          player->vectorH.x, player->vectorH.y);
-        ImGui_Text("VecV: X=%.3f  Y=%.3f",
-          player->vectorV.x, player->vectorV.y);
-        ImGui_Text("Hotbar slot: %d", player->inventory.hotbarSelect);
-      }
-
-      // World
-      if (ImGui_CollapsingHeader("World", 1)) {
-        ImGui_Text("Time: %d", world.time);
-        ImGui_Text("Seed: %d", world.seed);
-        ImGui_Text("Day/Night mode: %d", world.dayNightMode);
-      }
-
-      // Block targeting
-      if (ImGui_CollapsingHeader("Block Target", 0)) {
-        ImGui_Text("Selected: %s", blockSelected ? "yes" : "no");
-        if (blockSelected) {
-          ImGui_Text("Block: X=%d  Y=%d  Z=%d",
-            blockSelect.x, blockSelect.y, blockSelect.z);
-        }
-      }
-
-      ImGui_End();
-    }
     break;
 
   case POPUP_PAUSE:
@@ -806,7 +761,9 @@ void gameLoop_drawPopup (SDL_Renderer *renderer, Inputs *inputs) {
     // Inventory
     popup_inventory(renderer, inputs, player, &gamePopup);
     break;
-
+    
+// hey, if you're seeing this, congratulations on not getting to the hospital!
+  
   #ifndef small
   case POPUP_ADVANCED_DEBUG:
     // Advanced debug menu

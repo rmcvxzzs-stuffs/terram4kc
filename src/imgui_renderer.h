@@ -6,11 +6,14 @@
 extern "C" {
 #endif
 
-// Filled by gameloop each frame for the debug overlay
 typedef struct {
-    int   fps;
-    int   blockSelected;
-    int   blockX, blockY, blockZ;
+    int    fps;
+    int    blockSelected;
+    int    blockX, blockY, blockZ;
+    int    headInWater;
+    int    feetInWater;
+    double velFB;
+    double velLR;
 } ImguiDebugState;
 
 extern ImguiDebugState g_imgui_debug;

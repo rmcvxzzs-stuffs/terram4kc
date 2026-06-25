@@ -1,5 +1,97 @@
 # English translation for TerraM4KC.
+
+# Main Menu
 MAIN_MENU_SINGLEPLAYER: "Singleplayer"
 MAIN_MENU_OPTIONS: "Options"
 MAIN_MENU_MULTIPLAYER: "Multiplayer"
-MAIN_MENU_QUIT: "Quit"
+MAIN_MENU_QUIT: "Quit Game"
+
+# Multiplayer Screen
+MULTIPLAYER_JOIN: "Join Game"
+MULTIPLAYER_HOST: "Host Server"
+
+# Common UI Buttons
+COMMON_CANCEL: "Cancel"
+COMMON_OK: "Ok"
+COMMON_DONE: "Done"
+COMMON_UP: "UP"
+COMMON_DOWN: "DOWN"
+
+# World Selection
+WORLD_SELECT_EMPTY: "No worlds"
+WORLD_SELECT_NEW: "New"
+
+# Terrain Generation Names
+TERRAIN_CLASSIC: "Classic Terrain"
+TERRAIN_NATURAL: "Natural Terrain"
+TERRAIN_FLAT_STONE: "Flat Stone"
+TERRAIN_FLAT_GRASS: "Flat Grass"
+TERRAIN_WATER_WORLD: "Water World"
+
+# Time Cycle Modes
+CYCLE_DAY_NIGHT: "Day and Night"
+CYCLE_ALWAYS_DAY: "Always Day"
+CYCLE_ALWAYS_NIGHT: "Always Night"
+
+# Join Server Screen
+SERVER_JOIN_TITLE: "Join Server"
+SERVER_CONNECTING: "Connecting..."
+SERVER_IP_LABEL: "Server IP"
+SERVER_CONNECT_BTN: "Connect"
+
+# New World & Host Server Screen
+WORLD_NAME_LABEL: "Name"
+WORLD_HOST_NAME_LABEL: "World Name"
+WORLD_SEED_LABEL: "Seed"
+WORLD_GENERATE_BTN: "Generate"
+SERVER_START_BTN: "Start Server"
+
+# Loading Screen
+LOADING_GENERATING: "Generating world..."
+
+# Pause Menu
+PAUSE_BACK_TO_GAME: "Back to Game"
+PAUSE_OPTIONS: "Options..."
+PAUSE_SAVE_QUIT: "Save and Quit"
+
+# Settings / Options Menu
+OPTIONS_USERNAME: "Username"
+OPTIONS_MOUSE_CAPTURE_OFF: "Capture Mouse: OFF"
+OPTIONS_MOUSE_CAPTURE_ON: "Capture Mouse: ON"
+OPTIONS_DRAW_DISTANCE: "Draw distance: %i"
+OPTIONS_FOV_LOW: "FOV: Low"
+OPTIONS_FOV_MEDIUM: "FOV: Medium"
+OPTIONS_FOV_HIGH: "FOV: High"
+OPTIONS_FOV_UNKNOWN: "FOV: ?"
+OPTIONS_FOG_GRADUAL: "Fog: Gradual"
+OPTIONS_FOG_SHARP: "Fog: Sharp"
+
+# In-Game Chat / Messages
+CHAT_GAME_STARTED: "Game started"
+CHAT_SCREENSHOT_SAVED: "Saved screenshot"
+CHAT_SCREENSHOT_FAILED: "Couldn't save screenshot"
+
+# Error Messages
+ERROR_TITLE: "Error:"
+ERROR_REFRESH_WORLD_LIST: "Cannot refresh world list"
+ERROR_LOAD_WORLD: "Could not load world"
+ERROR_DELETE_WORLD: "Could not delete world"
+ERROR_CONNECT_FAILED: "Failed to connect to server"
+ERROR_START_SERVER: "Failed to start server"
+ERROR_SAVE_WORLD: "Could not save world"
+ERROR_SAVE_OPTIONS: "Could not save options"
+
+# Debug
+DEBUG_CHUNK_NOT_FOUND: "Chunk not found"
+
+# Easter Eggs
+EGG_TEXT: "PAIGE IS MAH WIIIFEEE!!!!" # dont ask 
+
+# Discord Rich Presence
+DISCORD_MAIN_MENU: "In Main Menu"
+DISCORD_SELECTING_WORLD: "Selecting World"
+DISCORD_CREATING_WORLD: "Creating World"
+DISCORD_LOADING_WORLD: "Loading World"
+DISCORD_SINGLEPLAYER: "Playing Singleplayer"
+DISCORD_IN_OPTIONS: "In Options"
+DISCORD_IN_MENU: "In Menu"

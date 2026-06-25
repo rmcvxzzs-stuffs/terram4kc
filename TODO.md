@@ -9,9 +9,13 @@
 - Discord RPC [x]
 - Debug support [-]
 - Android support [] (There is a leftover [`dpad.h`](./src/android/dpad.h) that was supposedly used for the DPad, but it's kept as a placeholder.) 
+- Raycasting replacement with shaders[]
+- Plugin support []
+- Debug support [-] (ImGui keeps misbehaving.) 
 
 ## Gameplay category
 - Audio support [x] 
 - Biome generation []
 - Actual player models with textures [-]
-- Localization [-]
+- Localization [-] (Only 2 finished, not implemented)
+- 
