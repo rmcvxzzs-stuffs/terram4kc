@@ -1,6 +1,4 @@
-# TerraM4KC
-
-![Grass block icon](icons/icon.png)
+![TerraM4KC](assets/textures/logo.png)
 
 ### TerraM4KC is a modified version of M4KC that adds New Features.
 It adds many new features that are (definitely) not on the M4KC roadmap.

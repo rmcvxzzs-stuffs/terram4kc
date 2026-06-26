@@ -176,20 +176,19 @@ static int controlLoop (Inputs *inputs, const Uint8 *keyboard) {
 }
 
 static int handleEvent (Inputs *inputs, const uint8_t *keyboard, SDL_Event event) {
-	// Pass events to cimgui first (only in debug mode)
-	if (g_debug_mode) {
-		imgui_process_event(&event);
+    if (g_debug_mode) {
+        imgui_process_event(&event);
 
-		// If imgui wants mouse, don't pass to game
-		if (imgui_wants_mouse()) {
-			if (event.type == SDL_QUIT) return 0;
-			if (event.type == SDL_KEYDOWN || event.type == SDL_KEYUP) {
-				// fall through to game input
-			} else {
-				return 1;
-			}
-		}
-	}
+        // Only block game mouse input if NOT in captured/relative mode
+        if (imgui_wants_mouse() && !SDL_GetRelativeMouseMode()) {
+            if (event.type == SDL_QUIT) return 0;
+            if (event.type == SDL_KEYDOWN || event.type == SDL_KEYUP) {
+                // fall through
+            } else {
+                return 1;
+            }
+        }
+    }
 
 	switch (event.type) {
 	case SDL_QUIT:

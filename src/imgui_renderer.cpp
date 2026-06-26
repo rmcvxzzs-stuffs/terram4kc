@@ -58,12 +58,43 @@ void imgui_new_frame(void) {
 }
 
 void imgui_render(void) {
-    // Reset renderer scale to 1:1 so imgui renders at screen pixels
     SDL_RenderSetScale(s_renderer, 1.0f, 1.0f);
 
     if (g_debug_mode) {
-        ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_Once);
-        ImGui::SetNextWindowSize(ImVec2(300, 480), ImGuiCond_Once);
+        // Menu bar window (top strip, full width)
+        ImGuiIO &io = ImGui::GetIO();
+        ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Always);
+        ImGui::SetNextWindowSize(ImVec2(io.DisplaySize.x, 0), ImGuiCond_Always);
+        ImGui::SetNextWindowBgAlpha(1.0f);
+        ImGui::Begin("##menubar", NULL,
+            ImGuiWindowFlags_NoTitleBar |
+            ImGuiWindowFlags_NoResize |
+            ImGuiWindowFlags_NoMove |
+            ImGuiWindowFlags_NoScrollbar |
+            ImGuiWindowFlags_NoSavedSettings |
+            ImGuiWindowFlags_MenuBar
+        );
+        if (ImGui::BeginMenuBar()) {
+            if (ImGui::BeginMenu("Debug")) {
+                ImGui::MenuItem("Show Overlay", NULL, true);
+                ImGui::EndMenu();
+            }
+            if (ImGui::BeginMenu("Player")) {
+                ImGui::MenuItem("(view only)", NULL, false, false);
+                ImGui::EndMenu();
+            }
+            if (ImGui::BeginMenu("World")) {
+                ImGui::MenuItem("(view only)", NULL, false, false);
+                ImGui::EndMenu();
+            }
+            ImGui::EndMenuBar();
+        }
+        ImGui::End();
+
+        // Main debug panel
+        float menuBarHeight = ImGui::GetFrameHeight();
+        ImGui::SetNextWindowPos(ImVec2(10, menuBarHeight + 6), ImGuiCond_Always);
+        ImGui::SetNextWindowSize(ImVec2(300, 460), ImGuiCond_Once);
         ImGui::Begin("TerraM4KC Debug");
 
         // --- Performance ---
@@ -87,39 +118,34 @@ void imgui_render(void) {
             if (player == NULL) {
                 ImGui::TextColored(ImVec4(1,0.5f,0.5f,1), "Not in game");
             } else {
-            ImGui::Text("XYZ:   %.3f / %.3f / %.3f",
-                player->pos.x, player->pos.y, player->pos.z);
-            ImGui::Text("Chunk: %d / %d / %d",
-                (int)player->pos.x >> 6,
-                (int)player->pos.y >> 6,
-                (int)player->pos.z >> 6);
-            ImGui::Separator();
-            double hDeg = player->hRot * (180.0 / 3.14159265358979);
-            double vDeg = player->vRot * (180.0 / 3.14159265358979);
-            // Facing direction label
-            const char *facing = "?";
-            double ha = fmod(hDeg + 360.0, 360.0);
-            if      (ha <  45.0 || ha >= 315.0) facing = "North (-Z)";
-            else if (ha <  135.0)               facing = "East  (+X)";
-            else if (ha <  225.0)               facing = "South (+Z)";
-            else                                facing = "West  (-X)";
-            ImGui::Text("Facing: %s", facing);
-            ImGui::Text("Yaw:   %.1f deg  (%.3f rad)", hDeg, player->hRot);
-            ImGui::Text("Pitch: %.1f deg  (%.3f rad)", vDeg, player->vRot);
-            ImGui::Separator();
-            ImGui::Text("VelFB: %.4f  VelLR: %.4f",
-                g_imgui_debug.velFB, g_imgui_debug.velLR);
-            ImGui::Separator();
-            ImGui::Text("Health: %d   Hunger: %d   Breath: %d",
-                player->health, player->hunger, player->breath);
-            ImGui::Text("XP:    %d", player->xp);
-            ImGui::Text("Hotbar slot: %d", player->inventory.hotbarSelect);
-            ImGui::Separator();
-            const char *waterState = "Dry";
-            if (g_imgui_debug.headInWater)       waterState = "Submerged";
-            else if (g_imgui_debug.feetInWater)  waterState = "Feet in water";
-            ImGui::Text("Water: %s", waterState);
-            } // end player != NULL
+                ImGui::Text("XYZ:   %.3f / %.3f / %.3f",
+                    player->pos.x, player->pos.y, player->pos.z);
+                ImGui::Text("Chunk: %d / %d / %d",
+                    (int)player->pos.x >> 6,
+                    (int)player->pos.y >> 6,
+                    (int)player->pos.z >> 6);
+                ImGui::Separator();
+                double hDeg = player->hRot * (180.0 / 3.14159265358979);
+                double vDeg = player->vRot * (180.0 / 3.14159265358979);
+                const char *facing = "?";
+                double ha = fmod(hDeg + 360.0, 360.0);
+                if      (ha <  45.0 || ha >= 315.0) facing = "North (-Z)";
+                else if (ha <  135.0)               facing = "East  (+X)";
+                else if (ha <  225.0)               facing = "South (+Z)";
+                else                                facing = "West  (-X)";
+                ImGui::Text("Facing: %s", facing);
+                ImGui::Text("Yaw:   %.1f deg  (%.3f rad)", hDeg, player->hRot);
+                ImGui::Text("Pitch: %.1f deg  (%.3f rad)", vDeg, player->vRot);
+                ImGui::Separator();
+                ImGui::Text("VelFB: %.4f  VelLR: %.4f",
+                    g_imgui_debug.velFB, g_imgui_debug.velLR);
+                ImGui::Separator();
+                const char *waterState = "Dry";
+                if (g_imgui_debug.headInWater)      waterState = "Submerged";
+                else if (g_imgui_debug.feetInWater) waterState = "Feet in water";
+                ImGui::Text("Water: %s", waterState);
+                ImGui::Text("Hotbar slot: %d", player->inventory.hotbarSelect);
+            }
         }
 
         // --- World ---
@@ -127,7 +153,6 @@ void imgui_render(void) {
             ImGui::Text("Name:      %s", world.path[0] ? world.path : "(none)");
             ImGui::Text("Seed:      %llu", (unsigned long long)world.seed);
             ImGui::Text("Time:      %llu", (unsigned long long)world.time);
-            // Time of day as a fraction of the day cycle (102944 ticks)
             float dayFrac = (float)((world.time % 102944) / 102944.0);
             ImGui::Text("Day cycle: %.1f%%", dayFrac * 100.0f);
             ImGui::ProgressBar(dayFrac, ImVec2(-1, 6), "");
@@ -152,9 +177,7 @@ void imgui_render(void) {
     }
 
     ImGui::Render();
-    ImGui_ImplSDLRenderer2_RenderDrawData(ImGui::GetDrawData(), NULL);
-
-    // Restore game scale
+    ImGui_ImplSDLRenderer2_RenderDrawData(ImGui::GetDrawData(), s_renderer);
     SDL_RenderSetScale(s_renderer, (float)BUFFER_SCALE, (float)BUFFER_SCALE);
 }
 
