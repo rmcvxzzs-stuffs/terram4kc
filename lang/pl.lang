@@ -1,0 +1,98 @@
+# Polish translation for TerraM4KC.
+# Made by RedstoneSC :D
+LANG_NAME=Polski
+# Main Menu
+MAIN_MENU_SINGLEPLAYER=Gra jednoosobowa
+MAIN_MENU_OPTIONS=Ustawienia
+MAIN_MENU_MULTIPLAYER=Gra wieloosobowa
+MAIN_MENU_QUIT=Wyjdź z gry
+
+# Multiplayer Screen
+MULTIPLAYER_JOIN=Dołącz do gry
+MULTIPLAYER_HOST=Stwórz grę
+
+# Common UI Buttons
+COMMON_CANCEL=Anuluj
+COMMON_OK=OK
+COMMON_DONE=Gotowe
+COMMON_UP=Góra
+COMMON_DOWN=Dół
+
+# World Selection
+WORLD_SELECT_EMPTY=Brak światów
+WORLD_SELECT_NEW=Stwórz nowy świat
+
+# Terrain Generation Names
+TERRAIN_CLASSIC=Klasyczny teren
+TERRAIN_NATURAL=Naturalny teren
+TERRAIN_FLAT_STONE=Płaski kamienny teren
+TERRAIN_FLAT_GRASS=Płaski trawiasty teren
+TERRAIN_WATER_WORLD=Świat wodny
+
+# Time Cycle Modes
+CYCLE_DAY_NIGHT=Dzień i noc
+CYCLE_ALWAYS_DAY=Zawsze dzień
+CYCLE_ALWAYS_NIGHT=Zawsze noc
+
+# Join Server Screen
+SERVER_JOIN_TITLE=Dołącz do serwera
+SERVER_CONNECTING=Łączenie...
+SERVER_IP_LABEL=IP serwera
+SERVER_CONNECT_BTN=Dołącz
+
+# New World & Host Server Screen
+WORLD_NAME_LABEL=Nazwa
+WORLD_HOST_NAME_LABEL=Nazwa świata
+WORLD_SEED_LABEL=Seed
+WORLD_GENERATE_BTN=Generuj
+SERVER_START_BTN=Rozpocznij sesję
+
+# Loading Screen
+LOADING_GENERATING=Generowanie świata...
+
+# Pause Menu
+PAUSE_BACK_TO_GAME=Powrót do gry
+PAUSE_OPTIONS=Ustawienia...
+PAUSE_SAVE_QUIT=Zapisz i wyjdź
+
+# Settings / Options Menu
+OPTIONS_USERNAME=Nazwa użytkownika
+OPTIONS_MOUSE_CAPTURE_OFF=Przechwytywanie myszy: WYŁĄCZONE
+OPTIONS_MOUSE_CAPTURE_ON=Przechwytywanie myszy: WŁĄCZONE
+OPTIONS_DRAW_DISTANCE=Zasięg renderowania: %i
+OPTIONS_FOV_LOW=FOV: Niskie
+OPTIONS_FOV_MEDIUM=FOV: Średnie
+OPTIONS_FOV_HIGH=FOV: Wysokie
+OPTIONS_FOV_UNKNOWN=FOV: ?
+OPTIONS_FOG_GRADUAL=Mgła: Stopniowa
+OPTIONS_FOG_SHARP=Mgła: Ostra
+
+# In-Game Chat / Messages
+CHAT_GAME_STARTED=Gra rozpoczęta
+CHAT_SCREENSHOT_SAVED=Zapisano zrzut ekranu
+CHAT_SCREENSHOT_FAILED=Nie udało się zapisać zrzutu ekranu
+
+# Error Messages
+ERROR_TITLE=Błąd:
+ERROR_REFRESH_WORLD_LIST=Nie udało się odświeżyć listy światów
+ERROR_LOAD_WORLD=Nie udało się załadować świata
+ERROR_DELETE_WORLD=Nie udało się usunąć świata
+ERROR_CONNECT_FAILED=Nie udało się połączyć z serwerem
+ERROR_START_SERVER=Nie udało się rozpocząć serwera
+ERROR_SAVE_WORLD=Nie udało się zapisać świata
+ERROR_SAVE_OPTIONS=Nie udało się zapisać ustawień
+
+# Debug
+DEBUG_CHUNK_NOT_FOUND=Nie znaleziono fragmentu (chunku)
+
+# Easter Eggs
+EGG_TEXT=Red był tutaj! :D
+
+# Discord Rich Presence
+DISCORD_MAIN_MENU=W ekranie głównym
+DISCORD_SELECTING_WORLD=Wybieranie świata
+DISCORD_CREATING_WORLD=Tworzenie świata
+DISCORD_LOADING_WORLD=Ładowanie świata
+DISCORD_SINGLEPLAYER=Rozgrywka jednoosobowa
+DISCORD_IN_OPTIONS=W ustawieniach
+DISCORD_IN_MENU=W menu

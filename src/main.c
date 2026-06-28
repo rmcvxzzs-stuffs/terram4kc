@@ -11,31 +11,32 @@
 #include "main.h"
 #include "gui.h"
 #include "audio.h"
-#include "discord_presence.h"
 #include "net.h"
+#include "loc.h"
 #include "imgui_renderer.h"
+#include "discord_presence.h"
 
 /* Minecraft 4k, C edition. Version 0.7
- * 
+ *
  * Credits:
  *   notch       - creating the original game
  *   sashakoshka - C port, modifications
  *   samsebe     - deciphering the meaning of some of the code
  *   gracie bell - daylight function
  *   https://gist.github.com/nowl/828013 - perlin noise
- *   
+ *
  *   ... & contributors on github!
  *   https://github.com/sashakoshka/m4kc/graphs/contributors
- * 
+ *
  * If you distribute a modified copy of this, just include this
  * notice.
  */
-  
- /* TerraM4KC 0.1.0
-  * Credits:
-  *  sashakoshka - Creating the base game
-  *  rmcvxzz     - Creator of TerraM4KC
-  */
+
+/* TerraM4KC 0.1.0
+ * Credits:
+ *  sashakoshka - Creating the base game
+ *  rmcvxzz     - Creator of TerraM4KC
+ */
 
 #define MAX_FPS 60
 #define MIN_FRAME_MILLISECONDS 1000 / MAX_FPS
@@ -45,7 +46,7 @@ static int handleEvent(Inputs *, const uint8_t *, SDL_Event);
 
 int g_debug_mode = 0;
 
-int main (int argc, char *argv[]) {
+int main(int argc, char *argv[]) {
 	// Parse command line arguments
 	for (int i = 1; i < argc; i++) {
 		if (strcmp(argv[i], "--debug") == 0) {
@@ -53,29 +54,23 @@ int main (int argc, char *argv[]) {
 		}
 	}
 
-	SDL_Window   *window   = NULL;
-	SDL_Renderer *renderer = NULL;
-	const uint8_t  *keyboard = SDL_GetKeyboardState(NULL);
+	SDL_Window *window      = NULL;
+	SDL_Renderer *renderer  = NULL;
+	const uint8_t *keyboard = SDL_GetKeyboardState(NULL);
 
 	if (SDL_Init(SDL_INIT_VIDEO) < 0) {
 		printf("cant make window\n");
 		goto exit;
 	}
 
-	window = SDL_CreateWindow ("TerraM4KC",
-		SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-		WINDOW_W, WINDOW_H,
-		SDL_WINDOW_SHOWN
-	);
+	window = SDL_CreateWindow("TerraM4KC", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
+	                          WINDOW_W, WINDOW_H, SDL_WINDOW_SHOWN);
 	if (window == NULL) {
 		printf("%s\n", SDL_GetError());
 		goto exit;
 	}
 
-	renderer = SDL_CreateRenderer (
-		window,
-		-1, SDL_RENDERER_ACCELERATED
-	);
+	renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
 	if (renderer == NULL) {
 		printf("%s\n", SDL_GetError());
 		goto exit;
@@ -83,10 +78,11 @@ int main (int argc, char *argv[]) {
 	SDL_RenderSetScale(renderer, BUFFER_SCALE, BUFFER_SCALE);
 	SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 
-	// Init cimgui only in debug mode
+#ifndef __ANDROID__
 	if (g_debug_mode) {
 		imgui_init(window, renderer);
 	}
+#endif
 
 	//--- initializing modules ---//
 
@@ -102,33 +98,48 @@ int main (int argc, char *argv[]) {
 		gameLoop_error("Cannot initialize options module.");
 	}
 
+	loc_scan_langs();
+	if (options.lang[0] == '\0') {
+		strncpy(options.lang, "en", sizeof(options.lang));
+	}
+	if (loc_load(options.lang) != 0) {
+		printf("Failed to load language: %s, falling back to en\n", options.lang);
+		loc_load("en");
+	}
+
 	err = audio_init();
 	if (err) {
 		printf("Audio init failed, continuing without sound\n");
 	}
 
+#ifndef __ANDROID__
 	err = discord_rpc_init();
 	if (err) {
 		printf("Discord RPC init failed, continuing without Discord integration\n");
 	}
+#endif
 
 	genTextures(45390874);
 
 	Inputs inputs = {0};
-	int running = 1;
+	int running   = 1;
 	while (running) {
 		uint32_t frameStartTime = SDL_GetTicks();
 
+#ifndef __ANDROID__
 		if (g_debug_mode) {
 			imgui_new_frame();
 		}
+#endif
 
 		running &= controlLoop(&inputs, keyboard);
 		running &= gameLoop(&inputs, renderer);
 
+#ifndef __ANDROID__
 		if (g_debug_mode) {
 			imgui_render();
 		}
+#endif
 
 		SDL_RenderPresent(renderer);
 		SDL_UpdateWindowSurface(window);
@@ -142,14 +153,17 @@ int main (int argc, char *argv[]) {
 		}
 	}
 
-	exit:
+exit:
 	audio_quit();
+#ifndef __ANDROID__
 	discord_rpc_quit();
+#endif
+	loc_quit();
 	SDL_Quit();
 	return 0;
 }
 
-static int controlLoop (Inputs *inputs, const Uint8 *keyboard) {
+static int controlLoop(Inputs *inputs, const Uint8 *keyboard) {
 	SDL_PumpEvents();
 	int mouseX = 0, mouseY = 0;
 	SDL_GetMouseState(&mouseX, &mouseY);
@@ -175,20 +189,22 @@ static int controlLoop (Inputs *inputs, const Uint8 *keyboard) {
 	return 1;
 }
 
-static int handleEvent (Inputs *inputs, const uint8_t *keyboard, SDL_Event event) {
-    if (g_debug_mode) {
-        imgui_process_event(&event);
+static int handleEvent(Inputs *inputs, const uint8_t *keyboard, SDL_Event event) {
+#ifndef __ANDROID__
+	if (g_debug_mode) {
+		imgui_process_event(&event);
 
-        // Only block game mouse input if NOT in captured/relative mode
-        if (imgui_wants_mouse() && !SDL_GetRelativeMouseMode()) {
-            if (event.type == SDL_QUIT) return 0;
-            if (event.type == SDL_KEYDOWN || event.type == SDL_KEYUP) {
-                // fall through
-            } else {
-                return 1;
-            }
-        }
-    }
+		if (imgui_wants_mouse() && !SDL_GetRelativeMouseMode()) {
+			if (event.type == SDL_QUIT)
+				return 0;
+			if (event.type == SDL_KEYDOWN || event.type == SDL_KEYUP) {
+				// fall through
+			} else {
+				return 1;
+			}
+		}
+	}
+#endif
 
 	switch (event.type) {
 	case SDL_QUIT:
@@ -265,7 +281,10 @@ static int handleEvent (Inputs *inputs, const uint8_t *keyboard, SDL_Event event
 #ifdef __MINGW32__
 #include <windows.h>
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
-    (void)hInstance; (void)hPrevInstance; (void)lpCmdLine; (void)nCmdShow;
-    return main(__argc, __argv);
+	(void)hInstance;
+	(void)hPrevInstance;
+	(void)lpCmdLine;
+	(void)nCmdShow;
+	return main(__argc, __argv);
 }
 #endif

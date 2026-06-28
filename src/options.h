@@ -7,6 +7,7 @@ typedef struct {
         int    trapMouse;
         double fov;
         InputBuffer username;
+        char   lang[8];
 } Options;
 
 extern Options options;

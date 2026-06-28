@@ -22,6 +22,8 @@ int options_init (void) {
                 }
         };
 
+        strncpy(options.lang, "en", sizeof(options.lang));
+
         int err = options_load();
         return err;
 }
@@ -55,6 +57,7 @@ int options_load (void) {
                 PARAMETER(trapMouse,    "%i",  &options.trapMouse)
                 PARAMETER(fov,          "%lf", &options.fov)
                 PARAMETER(username,     "%7s", username)
+                PARAMETER(lang,         "%7s", options.lang)
                 #undef PARAMETER
         }
 
@@ -81,6 +84,7 @@ int options_save (void) {
         fprintf(file, "trapMouse %i\n",    options.trapMouse);
         fprintf(file, "fov %lf\n",         options.fov);
         fprintf(file, "username %s\n",     username);
+        fprintf(file, "lang %s\n",         options.lang);
 
         fclose(file);
         return 0;

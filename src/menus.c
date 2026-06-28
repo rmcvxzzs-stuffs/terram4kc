@@ -6,18 +6,30 @@
 #include "gameloop.h"
 #include "audio.h"
 #include "net.h"
+#include "SDL_image.h"
+#include "loc.h"
 
-static int menu_optionsMain (SDL_Renderer *, Inputs *);
+static SDL_Texture *s_logo = NULL;
+
+static void loadLogo(SDL_Renderer *renderer) {
+        if (s_logo)
+                return;
+        s_logo = IMG_LoadTexture(renderer, "assets/textures/logo.png");
+        if (!s_logo)
+                printf("Logo load failed: %s\n", IMG_GetError());
+}
+
+static int menu_optionsMain(SDL_Renderer *, Inputs *);
 
 /* mouseClicked
  * Detects a rising edge on the left mouse button (0 -> 1 transition).
  * Used to play click sounds only once per actual button press.
  */
 static int mouseClicked(Inputs *inputs) {
-	static int prevMouseLeft = 0;
-	int clicked = inputs->mouse.left && !prevMouseLeft;
-	prevMouseLeft = inputs->mouse.left;
-	return clicked;
+        static int prevMouseLeft = 0;
+        int clicked              = inputs->mouse.left && !prevMouseLeft;
+        prevMouseLeft            = inputs->mouse.left;
+        return clicked;
 }
 
 /* === GAME STATES === */
@@ -26,36 +38,39 @@ static int mouseClicked(Inputs *inputs) {
  * Presents a title screen with basic options. Is capable of changing the game
  * state.
  */
-int state_title (SDL_Renderer *renderer, Inputs *inputs, int *gameState) {
+int state_title(SDL_Renderer *renderer, Inputs *inputs, int *gameState) {
         inputs->mouse.x /= BUFFER_SCALE;
         inputs->mouse.y /= BUFFER_SCALE;
 
         dirtBg(renderer);
         white(renderer);
-        drawBig (
-                renderer,
-                "TerraM4KC",
-                BUFFER_HALF_W,
-                6
-        );
+        loadLogo(renderer);
+        if (s_logo) {
+                int lw, lh;
+                SDL_QueryTexture(s_logo, NULL, NULL, &lw, &lh);
+                int drawW     = BUFFER_W - 10;
+                int drawH     = lh * drawW / lw;
+                SDL_Rect dest = {BUFFER_HALF_W - drawW / 2, 2, drawW, drawH};
+                SDL_RenderCopy(renderer, s_logo, NULL, &dest);
+        } else {
+                white(renderer);
+                drawBig(renderer, "TerraM4KC", BUFFER_HALF_W, 6);
+        }
 
-        #ifdef __ANDROID__ // android
-            shadowStr(renderer, "[TEMP] 0.1.0", 1, BUFFER_H - 9);
-        #else
-            #ifdef small
-                shadowStr(renderer, "[DEV] 0.1.0", 1, BUFFER_H - 9);
-            #else
-                shadowStr(renderer, "0.1.0", 1, BUFFER_H - 9);
-            #endif
-        #endif
-        
+#ifdef __ANDROID__
+        shadowStr(renderer, "[TEMP] 0.1.0", 1, BUFFER_H - 9);
+#else
+#ifdef small
+        shadowStr(renderer, "[DEV] 0.1.0", 1, BUFFER_H - 9);
+#else
+        shadowStr(renderer, "0.1.0", 1, BUFFER_H - 9);
+#endif
+#endif
 
-        if (button(renderer, "Singleplayer",
-                BUFFER_HALF_W - 64, 22, 128,
-                inputs->mouse.x, inputs->mouse.y) &&
-                mouseClicked(inputs)
-        ) {
-                	audio_play_click();
+        if (button(renderer, T("MAIN_MENU_SINGLEPLAYER"), BUFFER_HALF_W - 64, 40, 128, inputs->mouse.x,
+                   inputs->mouse.y) &&
+            mouseClicked(inputs)) {
+                audio_play_click();
                 if (data_refreshWorldList()) {
                         gameLoop_error("Cannot refresh world list");
                 } else {
@@ -63,87 +78,64 @@ int state_title (SDL_Renderer *renderer, Inputs *inputs, int *gameState) {
                 }
         }
 
-        if (button(renderer, "Options",
-                BUFFER_HALF_W - 64, 44, 128,
-                inputs->mouse.x, inputs->mouse.y) &&
-                mouseClicked(inputs)
-        ) {
-                	audio_play_click();
+        if (button(renderer, T("MAIN_MENU_OPTIONS"), BUFFER_HALF_W - 64, 58, 128, inputs->mouse.x,
+                   inputs->mouse.y) &&
+            mouseClicked(inputs)) {
+                audio_play_click();
                 *gameState = STATE_OPTIONS;
         }
 
-        
-	if (button(renderer, "Multiplayer",
-			BUFFER_HALF_W - 64, 66, 128,
-			inputs->mouse.x, inputs->mouse.y) &&
-			mouseClicked(inputs)
-	) {
-			audio_play_click();
-		*gameState = STATE_MULTIPLAYER;
-	}
+        if (button(renderer, T("MAIN_MENU_MULTIPLAYER"), BUFFER_HALF_W - 64, 76, 128, inputs->mouse.x,
+                   inputs->mouse.y) &&
+            mouseClicked(inputs)) {
+                audio_play_click();
+                *gameState = STATE_MULTIPLAYER;
+        }
 
-	if (button(renderer, "Quit Game",
-                BUFFER_HALF_W - 64, 88, 128,
-                inputs->mouse.x, inputs->mouse.y) &&
-                mouseClicked(inputs)
-        ) {
-                	audio_play_click();
+        if (button(renderer, T("MAIN_MENU_QUIT"), BUFFER_HALF_W - 64, 94, 128, inputs->mouse.x,
+                   inputs->mouse.y) &&
+            mouseClicked(inputs)) {
+                audio_play_click();
                 return 1;
         }
 
         return 0;
 }
 
-
 /* state_multiplayer
  * Shows multiplayer options: Join or Host.
  */
-void state_multiplayer (
-	SDL_Renderer *renderer,
-	Inputs *inputs,
-	int *gameState
-) {
-	inputs->mouse.x /= BUFFER_SCALE;
-	inputs->mouse.y /= BUFFER_SCALE;
+void state_multiplayer(SDL_Renderer *renderer, Inputs *inputs, int *gameState) {
+        inputs->mouse.x /= BUFFER_SCALE;
+        inputs->mouse.y /= BUFFER_SCALE;
 
-	dirtBg(renderer);
-	white(renderer);
-	drawBig(renderer, "Multiplayer", BUFFER_HALF_W, 16);
+        dirtBg(renderer);
+        white(renderer);
+        drawBig(renderer, T("MAIN_MENU_MULTIPLAYER"), BUFFER_HALF_W, 16);
 
-	if (button(renderer, "Join Game",
-			BUFFER_HALF_W - 64, 42, 128,
-			inputs->mouse.x, inputs->mouse.y) &&
-			mouseClicked(inputs)
-	) {
-			audio_play_click();
-		*gameState = STATE_SERVER_LIST;
-	}
+        if (button(renderer, T("MULTIPLAYER_JOIN"), BUFFER_HALF_W - 64, 42, 128, inputs->mouse.x,
+                   inputs->mouse.y) &&
+            mouseClicked(inputs)) {
+                audio_play_click();
+                *gameState = STATE_SERVER_LIST;
+        }
 
-	if (button(renderer, "Host Server",
-			BUFFER_HALF_W - 64, 64, 128,
-			inputs->mouse.x, inputs->mouse.y) &&
-			mouseClicked(inputs)
-	) {
-			audio_play_click();
-		*gameState = STATE_HOST_SERVER;
-	}
+        if (button(renderer, T("MULTIPLAYER_HOST"), BUFFER_HALF_W - 64, 64, 128, inputs->mouse.x,
+                   inputs->mouse.y) &&
+            mouseClicked(inputs)) {
+                audio_play_click();
+                *gameState = STATE_HOST_SERVER;
+        }
 
-	if (button(renderer, "Cancel",
-			BUFFER_HALF_W - 64, 86, 128,
-			inputs->mouse.x, inputs->mouse.y) &&
-			mouseClicked(inputs)
-	) {
-			audio_play_click();
-		*gameState = STATE_TITLE;
-	}
+        if (button(renderer, T("COMMON_CANCEL"), BUFFER_HALF_W - 64, 86, 128, inputs->mouse.x,
+                   inputs->mouse.y) &&
+            mouseClicked(inputs)) {
+                audio_play_click();
+                *gameState = STATE_TITLE;
+        }
 }
 
-void state_selectWorld (
-        SDL_Renderer *renderer,
-        Inputs *inputs,
-        int *gameState,
-        World *world
-) {
+void state_selectWorld(SDL_Renderer *renderer, Inputs *inputs, int *gameState, World *world) {
         static int scroll = 0;
         int needRefresh   = 0;
 
@@ -152,7 +144,9 @@ void state_selectWorld (
                 inputs->mouse.wheel = 0;
         }
 
-        if (scroll < 0) { scroll = 0; }
+        if (scroll < 0) {
+                scroll = 0;
+        }
         if (scroll > data_worldListLength - 1) {
                 scroll = data_worldListLength - 1;
         }
@@ -162,31 +156,33 @@ void state_selectWorld (
         listBackground.y = 0;
         listBackground.w = BUFFER_W;
         listBackground.h = BUFFER_H - 28;
-        
+
         inputs->mouse.x /= BUFFER_SCALE;
         inputs->mouse.y /= BUFFER_SCALE;
 
         dirtBg(renderer);
         tblack(renderer);
-        SDL_RenderFillRect (renderer, &listBackground);
-        SDL_RenderDrawLine (renderer,
-                0,        BUFFER_H - 29,
-                BUFFER_W, BUFFER_H - 29);
+        SDL_RenderFillRect(renderer, &listBackground);
+        SDL_RenderDrawLine(renderer, 0, BUFFER_H - 29, BUFFER_W, BUFFER_H - 29);
 
-        int index  = 0;
-        int y      = 6;
-        int yLimit = BUFFER_H - 44;
+        int index                = 0;
+        int y                    = 6;
+        int yLimit               = BUFFER_H - 44;
         data_WorldListItem *item = data_worldList;
         while (item != NULL) {
-                if (y > yLimit)     { break;}
-                if (index < scroll) { goto nextItem; }
-                
-                int hover = drawWorldListItem(renderer, item,
-                        BUFFER_HALF_W - 64, y,
-                        inputs->mouse.x,
-                        inputs->mouse.y);
+                if (y > yLimit) {
+                        break;
+                }
+                if (index < scroll) {
+                        goto nextItem;
+                }
+
+                int hover = drawWorldListItem(renderer, item, BUFFER_HALF_W - 64, y, inputs->mouse.x,
+                                              inputs->mouse.y);
                 y += 21;
-                if (!inputs->mouse.left) { goto nextItem; }
+                if (!inputs->mouse.left) {
+                        goto nextItem;
+                }
 
                 switch (hover) {
                 case 1:
@@ -196,8 +192,8 @@ void state_selectWorld (
                                 *gameState = STATE_LOADING;
                         }
                         return;
-                case 2:
-                        ;char deletePath[PATH_MAX];
+                case 2:;
+                        char deletePath[PATH_MAX];
                         if (data_getWorldPath(deletePath, item->name)) {
                                 gameLoop_error("Could not delete world");
                                 return;
@@ -205,46 +201,38 @@ void state_selectWorld (
 
                         data_removeDirectory(deletePath);
                         needRefresh = 1;
-                        
+
                         break;
                 }
 
-                nextItem:
-                index ++;
+        nextItem:
+                index++;
                 item = item->next;
         }
 
         if (6 + index * 22 > yLimit) {
-                scrollbar (
-                        renderer,
-                        BUFFER_HALF_W + 70, 0, BUFFER_H - 29,
-                        inputs->mouse.x, inputs->mouse.y, inputs->mouse.left,
-                        &scroll, data_worldListLength); 
+                scrollbar(renderer, BUFFER_HALF_W + 70, 0, BUFFER_H - 29, inputs->mouse.x, inputs->mouse.y,
+                          inputs->mouse.left, &scroll, data_worldListLength);
         }
 
         if (index == 0) {
-                shadowCenterStr (renderer, "No worlds",
-                        BUFFER_HALF_W, BUFFER_HALF_H - 15);
+                shadowCenterStr(renderer, T("WORLD_SELECT_EMPTY"), BUFFER_HALF_W, BUFFER_HALF_H - 15);
         }
 
-        if (button(renderer, "Cancel",
-                BUFFER_HALF_W - 64, BUFFER_H - 22, 61,
-                inputs->mouse.x, inputs->mouse.y) &&
-                mouseClicked(inputs)
-        ) {
-                	audio_play_click();
+        if (button(renderer, T("COMMON_CANCEL"), BUFFER_HALF_W - 64, BUFFER_H - 22, 61, inputs->mouse.x,
+                   inputs->mouse.y) &&
+            mouseClicked(inputs)) {
+                audio_play_click();
                 *gameState = STATE_TITLE;
-                scroll = 0;
+                scroll     = 0;
         }
 
-        if (button(renderer, "New",
-                BUFFER_HALF_W + 3, BUFFER_H - 22, 61,
-                inputs->mouse.x, inputs->mouse.y) &&
-                mouseClicked(inputs)
-        ) {
-                	audio_play_click();
+        if (button(renderer, T("WORLD_SELECT_NEW"), BUFFER_HALF_W + 3, BUFFER_H - 22, 61,
+                   inputs->mouse.x, inputs->mouse.y) &&
+            mouseClicked(inputs)) {
+                audio_play_click();
                 *gameState = STATE_NEW_WORLD;
-                scroll = 0;
+                scroll     = 0;
         }
 
         if (needRefresh) {
@@ -252,124 +240,93 @@ void state_selectWorld (
         }
 }
 
-const char *terrainNames[16] = {
-        "Classic Terrain",
-        "Natural Terrain",
-        "Flat Stone",
-        "Flat Grass",
-        "Water World"
-};
+static const char *terrainName(int i) {
+        static const char *keys[] = {"TERRAIN_CLASSIC", "TERRAIN_NATURAL", "TERRAIN_FLAT_STONE",
+                                     "TERRAIN_FLAT_GRASS", "TERRAIN_WATER_WORLD"};
+        return T(keys[i]);
+}
 
-const char *dayNightModes[16] = {
-        "Day and Night",
-        "Always Day",
-        "Always Night",
-};
-
+static const char *dayNightMode(int i) {
+        static const char *keys[] = {"CYCLE_DAY_NIGHT", "CYCLE_ALWAYS_DAY", "CYCLE_ALWAYS_NIGHT"};
+        return T(keys[i]);
+}
 
 /* state_serverList
  * Shows a server list menu for joining multiplayer games.
  * Similar to world select but for entering IP addresses.
  */
-void state_serverList (
-	SDL_Renderer *renderer,
-	Inputs *inputs,
-	int *gameState,
-	World *world
-) {
-	static char ipBuffer[32] = "localhost";
-	static InputBuffer ipInput = {
-		.buffer = ipBuffer,
-		.len    = 32,
-		.cursor = 0
-	};
-	static int connecting = 0;
+void state_serverList(SDL_Renderer *renderer, Inputs *inputs, int *gameState, World *world) {
+        static char ipBuffer[32]   = "localhost";
+        static InputBuffer ipInput = {.buffer = ipBuffer, .len = 32, .cursor = 0};
+        static int connecting      = 0;
 
-	inputs->mouse.x /= BUFFER_SCALE;
-	inputs->mouse.y /= BUFFER_SCALE;
+        inputs->mouse.x /= BUFFER_SCALE;
+        inputs->mouse.y /= BUFFER_SCALE;
 
-	dirtBg(renderer);
-	white(renderer);
-	drawBig(renderer, "Join Server", BUFFER_HALF_W, 16);
+        dirtBg(renderer);
+        white(renderer);
+        drawBig(renderer, T("SERVER_JOIN_TITLE"), BUFFER_HALF_W, 16);
 
-	if (connecting) {
-		shadowCenterStr(renderer, "Connecting...", BUFFER_HALF_W, BUFFER_HALF_H);
-		if (net_init_join(ipBuffer, NET_PORT) == 0) {
-			connecting = 0;
-			*gameState = STATE_LOADING;
-		} else {
-			connecting = 0;
-			gameLoop_error("Failed to connect to server");
-		}
-	} else {
-		manageInputBuffer(&ipInput, inputs);
-		input(renderer, "Server IP", ipInput.buffer,
-			BUFFER_HALF_W - 64, 42, 128,
-			inputs->mouse.x, inputs->mouse.y, 1);
+        if (connecting) {
+                shadowCenterStr(renderer, T("SERVER_CONNECTING"), BUFFER_HALF_W, BUFFER_HALF_H);
+                if (net_init_join(ipBuffer, NET_PORT) == 0) {
+                        connecting = 0;
+                        *gameState = STATE_LOADING;
+                } else {
+                        connecting = 0;
+                        gameLoop_error("Failed to connect to server");
+                }
+        } else {
+                manageInputBuffer(&ipInput, inputs);
+                input(renderer, T("SERVER_IP_LABEL"), ipInput.buffer, BUFFER_HALF_W - 64, 42, 128,
+                      inputs->mouse.x, inputs->mouse.y, 1);
 
-		if (button(renderer, "Connect",
-				BUFFER_HALF_W - 64, 64, 128,
-				inputs->mouse.x, inputs->mouse.y) &&
-				mouseClicked(inputs)
-		) {
-				audio_play_click();
-			connecting = 1;
-		}
-	}
+                if (button(renderer, T("SERVER_CONNECT_BTN"), BUFFER_HALF_W - 64, 64, 128, inputs->mouse.x,
+                           inputs->mouse.y) &&
+                    mouseClicked(inputs)) {
+                        audio_play_click();
+                        connecting = 1;
+                }
+        }
 
-	if (button(renderer, "Cancel",
-			BUFFER_HALF_W - 64, 86, 128,
-			inputs->mouse.x, inputs->mouse.y) &&
-			mouseClicked(inputs)
-	) {
-			audio_play_click();
-		*gameState = STATE_TITLE;
-		connecting = 0;
-	}
+        if (button(renderer, T("COMMON_CANCEL"), BUFFER_HALF_W - 64, 86, 128, inputs->mouse.x,
+                   inputs->mouse.y) &&
+            mouseClicked(inputs)) {
+                audio_play_click();
+                *gameState = STATE_TITLE;
+                connecting = 0;
+        }
 }
 
 /* state_newWorld
  * Shows a menu with editable parameters for creating a new world. Capable of
  * editing world prarameters and changing the game state.
  */
-void state_newWorld (
-        SDL_Renderer *renderer,
-        Inputs *inputs,
-        int *gameState,
-        World *world
-) {
+void state_newWorld(SDL_Renderer *renderer, Inputs *inputs, int *gameState, World *world) {
         static int badName    = 0;
         static int whichInput = 0;
 
         static int typeSelect     = 1;
         static int dayNightSelect = 0;
-        
+
         static char seedBuffer[16];
-        static InputBuffer seedInput = {
-                .buffer = seedBuffer,
-                .len    = 16,
-                .cursor = 0
-        };
-        
+        static InputBuffer seedInput = {.buffer = seedBuffer, .len = 16, .cursor = 0};
+
         static char nameBuffer[16];
-        static InputBuffer nameInput = {
-                .buffer = nameBuffer,
-                .len    = 16,
-                .cursor = 0
-        };
-                
+        static InputBuffer nameInput = {.buffer = nameBuffer, .len = 16, .cursor = 0};
+
         inputs->mouse.x /= BUFFER_SCALE;
         inputs->mouse.y /= BUFFER_SCALE;
 
         dirtBg(renderer);
-        
-        if (whichInput == 0) {manageInputBuffer(&nameInput, inputs); }
-        if (input(renderer, "Name", nameInput.buffer,
-                BUFFER_HALF_W - 64, 8, 128,
-                inputs->mouse.x, inputs->mouse.y, whichInput == 0) &&
-                mouseClicked(inputs)
-        ) {
-                	audio_play_click();
+
+        if (whichInput == 0) {
+                manageInputBuffer(&nameInput, inputs);
+        }
+        if (input(renderer, T("WORLD_NAME_LABEL"), nameInput.buffer, BUFFER_HALF_W - 64, 8, 128,
+                  inputs->mouse.x, inputs->mouse.y, whichInput == 0) &&
+            mouseClicked(inputs)) {
+                audio_play_click();
                 whichInput = 0;
         }
 
@@ -377,56 +334,47 @@ void state_newWorld (
                 SDL_SetRenderDrawColor(renderer, 255, 128, 128, 255);
                 drawChar(renderer, '!', BUFFER_HALF_W + 70, 12);
         }
-        
-        if (whichInput == 1) {manageInputBuffer(&seedInput, inputs); }
-        if (input(renderer, "Seed", seedInput.buffer,
-                BUFFER_HALF_W - 64, 30, 128,
-                inputs->mouse.x, inputs->mouse.y, whichInput == 1) &&
-                mouseClicked(inputs)
-        ) {
-                	audio_play_click();
+
+        if (whichInput == 1) {
+                manageInputBuffer(&seedInput, inputs);
+        }
+        if (input(renderer, T("WORLD_SEED_LABEL"), seedInput.buffer, BUFFER_HALF_W - 64, 30, 128,
+                  inputs->mouse.x, inputs->mouse.y, whichInput == 1) &&
+            mouseClicked(inputs)) {
+                audio_play_click();
                 whichInput = 1;
         }
-        
-        if (button(renderer, terrainNames[typeSelect],
-                BUFFER_HALF_W - 64, 52, 128,
-                inputs->mouse.x, inputs->mouse.y) &&
-                mouseClicked(inputs)
-        ) {
-                	audio_play_click();
+
+        if (button(renderer, terrainName(typeSelect), BUFFER_HALF_W - 64, 52, 128, inputs->mouse.x,
+                   inputs->mouse.y) &&
+            mouseClicked(inputs)) {
+                audio_play_click();
                 typeSelect = (typeSelect + 1) % 5;
         }
 
-
-        if (button(renderer, dayNightModes[dayNightSelect],
-                BUFFER_HALF_W - 64, 74, 128,
-                inputs->mouse.x, inputs->mouse.y) &&
-                mouseClicked(inputs)
-        ) {
-                	audio_play_click();
+        if (button(renderer, dayNightMode(dayNightSelect), BUFFER_HALF_W - 64, 74, 128, inputs->mouse.x,
+                   inputs->mouse.y) &&
+            mouseClicked(inputs)) {
+                audio_play_click();
                 dayNightSelect = (dayNightSelect + 1) % 3;
         }
 
-        if (button(renderer, "Cancel",
-                BUFFER_HALF_W - 64, 96, 61,
-                inputs->mouse.x, inputs->mouse.y) &&
-                mouseClicked(inputs)
-        ) {
-                	audio_play_click();
+        if (button(renderer, T("COMMON_CANCEL"), BUFFER_HALF_W - 64, 96, 61, inputs->mouse.x,
+                   inputs->mouse.y) &&
+            mouseClicked(inputs)) {
+                audio_play_click();
                 *gameState = STATE_SELECT_WORLD;
         }
 
-        if (button(renderer, "Generate",
-                BUFFER_HALF_W + 3, 96, 61,
-                inputs->mouse.x, inputs->mouse.y) &&
-                mouseClicked(inputs)
-        ) {
-                	audio_play_click();
+        if (button(renderer, T("WORLD_GENERATE_BTN"), BUFFER_HALF_W + 3, 96, 61, inputs->mouse.x,
+                   inputs->mouse.y) &&
+            mouseClicked(inputs)) {
+                audio_play_click();
                 // Reject empty names and names with slashes
                 if (nameInput.buffer[0] == 0) {
                         goto cantMakeWorld;
                 }
-                for (int index = 0; nameInput.buffer[index]; index ++) {
+                for (int index = 0; nameInput.buffer[index]; index++) {
                         if (nameInput.buffer[index] == '/') {
                                 goto cantMakeWorld;
                         }
@@ -446,7 +394,7 @@ void state_newWorld (
 
                 // Get numeric seed
                 world->seed = 0;
-                for (int index = 0; seedInput.buffer[index]; index ++) {
+                for (int index = 0; seedInput.buffer[index]; index++) {
                         world->seed *= 10;
                         world->seed += seedInput.buffer[index] - '0';
                 }
@@ -460,217 +408,175 @@ void state_newWorld (
                 if (world->seed == 5800) {
                         world->type = -1;
                 }
-                
+
                 whichInput = 0;
-                
+
                 seedInput.buffer[0] = 0;
                 seedInput.cursor    = 0;
-                
+
                 nameInput.buffer[0] = 0;
                 nameInput.cursor    = 0;
                 badName             = 0;
-                
+
                 *gameState = STATE_LOADING;
         }
 
         return;
 
-        cantMakeWorld:
+cantMakeWorld:
         nameInput.buffer[0] = 0;
         nameInput.cursor    = 0;
         badName             = 1;
 }
 
-
 /* state_hostServer
  * Shows a world creation menu for hosting a multiplayer server.
  * Similar to new world but starts a server instead of generating locally.
  */
-void state_hostServer (
-	SDL_Renderer *renderer,
-	Inputs *inputs,
-	int *gameState,
-	World *world
-) {
-	static int badName = 0;
-	static int whichInput = 0;
-	static int typeSelect = 1;
-	static int dayNightSelect = 0;
+void state_hostServer(SDL_Renderer *renderer, Inputs *inputs, int *gameState, World *world) {
+        static int badName        = 0;
+        static int whichInput     = 0;
+        static int typeSelect     = 1;
+        static int dayNightSelect = 0;
 
-	static char seedBuffer[16];
-	static InputBuffer seedInput = {
-		.buffer = seedBuffer,
-		.len    = 16,
-		.cursor = 0
-	};
+        static char seedBuffer[16];
+        static InputBuffer seedInput = {.buffer = seedBuffer, .len = 16, .cursor = 0};
 
-	static char nameBuffer[16];
-	static InputBuffer nameInput = {
-		.buffer = nameBuffer,
-		.len    = 16,
-		.cursor = 0
-	};
+        static char nameBuffer[16];
+        static InputBuffer nameInput = {.buffer = nameBuffer, .len = 16, .cursor = 0};
 
-	inputs->mouse.x /= BUFFER_SCALE;
-	inputs->mouse.y /= BUFFER_SCALE;
+        inputs->mouse.x /= BUFFER_SCALE;
+        inputs->mouse.y /= BUFFER_SCALE;
 
-	dirtBg(renderer);
+        dirtBg(renderer);
 
-	if (whichInput == 0) { manageInputBuffer(&nameInput, inputs); }
-	if (input(renderer, "World Name", nameInput.buffer,
-			BUFFER_HALF_W - 64, 8, 128,
-			inputs->mouse.x, inputs->mouse.y, whichInput == 0) &&
-			mouseClicked(inputs)
-	) {
-			audio_play_click();
-		whichInput = 0;
-	}
+        if (whichInput == 0) {
+                manageInputBuffer(&nameInput, inputs);
+        }
+        if (input(renderer, T("WORLD_HOST_NAME_LABEL"), nameInput.buffer, BUFFER_HALF_W - 64, 8, 128,
+                  inputs->mouse.x, inputs->mouse.y, whichInput == 0) &&
+            mouseClicked(inputs)) {
+                audio_play_click();
+                whichInput = 0;
+        }
 
-	if (badName) {
-		SDL_SetRenderDrawColor(renderer, 255, 128, 128, 255);
-		drawChar(renderer, '!', BUFFER_HALF_W + 70, 12);
-	}
+        if (badName) {
+                SDL_SetRenderDrawColor(renderer, 255, 128, 128, 255);
+                drawChar(renderer, '!', BUFFER_HALF_W + 70, 12);
+        }
 
-	if (whichInput == 1) { manageInputBuffer(&seedInput, inputs); }
-	if (input(renderer, "Seed", seedInput.buffer,
-			BUFFER_HALF_W - 64, 30, 128,
-			inputs->mouse.x, inputs->mouse.y, whichInput == 1) &&
-			mouseClicked(inputs)
-	) {
-			audio_play_click();
-		whichInput = 1;
-	}
+        if (whichInput == 1) {
+                manageInputBuffer(&seedInput, inputs);
+        }
+        if (input(renderer, T("WORLD_SEED_LABEL"), seedInput.buffer, BUFFER_HALF_W - 64, 30, 128,
+                  inputs->mouse.x, inputs->mouse.y, whichInput == 1) &&
+            mouseClicked(inputs)) {
+                audio_play_click();
+                whichInput = 1;
+        }
 
-	if (button(renderer, terrainNames[typeSelect],
-			BUFFER_HALF_W - 64, 52, 128,
-			inputs->mouse.x, inputs->mouse.y) &&
-			mouseClicked(inputs)
-	) {
-			audio_play_click();
-		typeSelect = (typeSelect + 1) % 5;
-	}
+        if (button(renderer, terrainName(typeSelect), BUFFER_HALF_W - 64, 52, 128, inputs->mouse.x,
+                   inputs->mouse.y) &&
+            mouseClicked(inputs)) {
+                audio_play_click();
+                typeSelect = (typeSelect + 1) % 5;
+        }
 
-	if (button(renderer, dayNightModes[dayNightSelect],
-			BUFFER_HALF_W - 64, 74, 128,
-			inputs->mouse.x, inputs->mouse.y) &&
-			mouseClicked(inputs)
-	) {
-			audio_play_click();
-		dayNightSelect = (dayNightSelect + 1) % 3;
-	}
+        if (button(renderer, dayNightMode(dayNightSelect), BUFFER_HALF_W - 64, 74, 128, inputs->mouse.x,
+                   inputs->mouse.y) &&
+            mouseClicked(inputs)) {
+                audio_play_click();
+                dayNightSelect = (dayNightSelect + 1) % 3;
+        }
 
-	if (button(renderer, "Cancel",
-			BUFFER_HALF_W - 64, 96, 61,
-			inputs->mouse.x, inputs->mouse.y) &&
-			mouseClicked(inputs)
-	) {
-			audio_play_click();
-		*gameState = STATE_TITLE;
-	}
+        if (button(renderer, T("COMMON_CANCEL"), BUFFER_HALF_W - 64, 96, 61, inputs->mouse.x,
+                   inputs->mouse.y) &&
+            mouseClicked(inputs)) {
+                audio_play_click();
+                *gameState = STATE_TITLE;
+        }
 
-	if (button(renderer, "Start Server",
-			BUFFER_HALF_W + 3, 96, 61,
-			inputs->mouse.x, inputs->mouse.y) &&
-			mouseClicked(inputs)
-	) {
-			audio_play_click();
-		// Reject empty names and names with slashes
-		if (nameInput.buffer[0] == 0) {
-			goto cantHostServer;
-		}
-		for (int index = 0; nameInput.buffer[index]; index++) {
-			if (nameInput.buffer[index] == '/') {
-				goto cantHostServer;
-			}
-		}
+        if (button(renderer, T("SERVER_START_BTN"), BUFFER_HALF_W + 3, 96, 61, inputs->mouse.x,
+                   inputs->mouse.y) &&
+            mouseClicked(inputs)) {
+                audio_play_click();
+                // Reject empty names and names with slashes
+                if (nameInput.buffer[0] == 0) {
+                        goto cantHostServer;
+                }
+                for (int index = 0; nameInput.buffer[index]; index++) {
+                        if (nameInput.buffer[index] == '/') {
+                                goto cantHostServer;
+                        }
+                }
 
-		if (data_getWorldPath(world->path, nameInput.buffer)) {
-			goto cantHostServer;
-		}
+                if (data_getWorldPath(world->path, nameInput.buffer)) {
+                        goto cantHostServer;
+                }
 
-		if (data_directoryExists(world->path)) {
-			// Load existing world
-			if (World_load(world, nameInput.buffer)) {
-				goto cantHostServer;
-			}
-		} else {
-			// Create new world
-			world->time = 2048;
-			world->type = typeSelect;
-			world->dayNightMode = dayNightSelect;
+                if (data_directoryExists(world->path)) {
+                        // Load existing world
+                        if (World_load(world, nameInput.buffer)) {
+                                goto cantHostServer;
+                        }
+                } else {
+                        // Create new world
+                        world->time         = 2048;
+                        world->type         = typeSelect;
+                        world->dayNightMode = dayNightSelect;
 
-			world->seed = 0;
-			for (int index = 0; seedInput.buffer[index]; index++) {
-				world->seed *= 10;
-				world->seed += seedInput.buffer[index] - '0';
-			}
-			if (world->seed == 0) {
-				world->seed = time(0) % 999999999999999;
-			}
-			if (world->seed == 5800) {
-				world->type = -1;
-			}
-		}
+                        world->seed = 0;
+                        for (int index = 0; seedInput.buffer[index]; index++) {
+                                world->seed *= 10;
+                                world->seed += seedInput.buffer[index] - '0';
+                        }
+                        if (world->seed == 0) {
+                                world->seed = time(0) % 999999999999999;
+                        }
+                        if (world->seed == 5800) {
+                                world->type = -1;
+                        }
+                }
 
-		// Start the server
-		if (net_init_host(NET_PORT, nameInput.buffer) != 0) {
-			gameLoop_error("Failed to start server");
-			return;
-		}
+                // Start the server
+                if (net_init_host(NET_PORT, nameInput.buffer) != 0) {
+                        gameLoop_error("Failed to start server");
+                        return;
+                }
 
-		whichInput = 0;
-		seedInput.buffer[0] = 0;
-		seedInput.cursor = 0;
-		nameInput.buffer[0] = 0;
-		nameInput.cursor = 0;
-		badName = 0;
+                whichInput          = 0;
+                seedInput.buffer[0] = 0;
+                seedInput.cursor    = 0;
+                nameInput.buffer[0] = 0;
+                nameInput.cursor    = 0;
+                badName             = 0;
 
-		*gameState = STATE_LOADING;
-	}
+                *gameState = STATE_LOADING;
+        }
 
-	return;
+        return;
 
-	cantHostServer:
-	nameInput.buffer[0] = 0;
-	nameInput.cursor = 0;
-	badName = 1;
+cantHostServer:
+        nameInput.buffer[0] = 0;
+        nameInput.cursor    = 0;
+        badName             = 1;
 }
 
 /* state_loading
  * Shows a loading screen and progressively loads in chunks. Returns 1 when
  * finished.
  */
-int state_loading (
-        SDL_Renderer *renderer,
-        World *world,
-        unsigned int seed,
-        Coords center
-) {
+int state_loading(SDL_Renderer *renderer, World *world, unsigned int seed, Coords center) {
         IntCoords chunkLoadCoords;
         static int chunkLoadNum = 0;
-        
+
         if (chunkLoadNum < CHUNKARR_SIZE) {
-                chunkLoadCoords.x =
-                        ((chunkLoadNum % CHUNKARR_DIAM) -
-                        CHUNKARR_RAD) * 64;
-                chunkLoadCoords.y =
-                        (((chunkLoadNum / CHUNKARR_DIAM) % CHUNKARR_DIAM) - 
-                        CHUNKARR_RAD) * 64;
-                chunkLoadCoords.z =
-                        ((chunkLoadNum / (CHUNKARR_DIAM * CHUNKARR_DIAM)) -
-                        CHUNKARR_RAD) * 64;
-                genChunk (
-                        world, seed,
-                        chunkLoadCoords.x,
-                        chunkLoadCoords.y,
-                        chunkLoadCoords.z, world->type, 1,
-                        center
-                );
-                loadScreen (
-                        renderer,
-                        "Generating world...",
-                        chunkLoadNum, CHUNKARR_SIZE
-                );
+                chunkLoadCoords.x = ((chunkLoadNum % CHUNKARR_DIAM) - CHUNKARR_RAD) * 64;
+                chunkLoadCoords.y = (((chunkLoadNum / CHUNKARR_DIAM) % CHUNKARR_DIAM) - CHUNKARR_RAD) * 64;
+                chunkLoadCoords.z = ((chunkLoadNum / (CHUNKARR_DIAM * CHUNKARR_DIAM)) - CHUNKARR_RAD) * 64;
+                genChunk(world, seed, chunkLoadCoords.x, chunkLoadCoords.y, chunkLoadCoords.z, world->type,
+                         1, center);
+                loadScreen(renderer, T("LOADING_GENERATING"), chunkLoadNum, CHUNKARR_SIZE);
                 chunkLoadNum++;
                 return 0;
         } else {
@@ -682,13 +588,13 @@ int state_loading (
 /* state_options
  * Shows an options screen. Capable of changing settings and the game state.
  */
-void state_options (SDL_Renderer *renderer, Inputs *inputs, int *gameState) {
+void state_options(SDL_Renderer *renderer, Inputs *inputs, int *gameState) {
         inputs->mouse.x /= BUFFER_SCALE;
         inputs->mouse.y /= BUFFER_SCALE;
 
         dirtBg(renderer);
 
-        if (menu_optionsMain (renderer, inputs)) {
+        if (menu_optionsMain(renderer, inputs)) {
                 *gameState = 0;
         }
 }
@@ -696,24 +602,17 @@ void state_options (SDL_Renderer *renderer, Inputs *inputs, int *gameState) {
 /* state_egg
  * This lacks description. Capable of changing the game state.
  */
-void state_egg (SDL_Renderer *renderer, Inputs *inputs, int *gameState) {
+void state_egg(SDL_Renderer *renderer, Inputs *inputs, int *gameState) {
         inputs->mouse.x /= BUFFER_SCALE;
         inputs->mouse.y /= BUFFER_SCALE;
 
         dirtBg(renderer);
         white(renderer);
-        centerStr (
-                renderer,
-                "Go away, this is my house.",
-                BUFFER_HALF_W,
-                BUFFER_HALF_H - 16
-        );
-        if (button(renderer, "Ok",
-                BUFFER_HALF_W - 64, BUFFER_HALF_H, 128,
-                inputs->mouse.x, inputs->mouse.y) &&
-                mouseClicked(inputs)
-        ) {
-                	audio_play_click();
+        centerStr(renderer, "Go away, this is my house.", BUFFER_HALF_W, BUFFER_HALF_H - 16);
+        if (button(renderer, T("COMMON_OK"), BUFFER_HALF_W - 64, BUFFER_HALF_H, 128, inputs->mouse.x,
+                   inputs->mouse.y) &&
+            mouseClicked(inputs)) {
+                audio_play_click();
                 *gameState = STATE_TITLE;
         }
 }
@@ -721,31 +620,19 @@ void state_egg (SDL_Renderer *renderer, Inputs *inputs, int *gameState) {
 /* state_err
  * Shows an error message on screen. Returns 1 when the "Ok" button is pressed.
  */
-int state_err (SDL_Renderer *renderer, Inputs *inputs, char *message) {
+int state_err(SDL_Renderer *renderer, Inputs *inputs, char *message) {
         inputs->mouse.x /= BUFFER_SCALE;
         inputs->mouse.y /= BUFFER_SCALE;
 
         dirtBg(renderer);
         SDL_SetRenderDrawColor(renderer, 255, 128, 128, 255);
-        centerStr (
-                renderer,
-                "Error:",
-                BUFFER_HALF_W,
-                BUFFER_HALF_H - 20
-        );
+        centerStr(renderer, T("ERROR_TITLE"), BUFFER_HALF_W, BUFFER_HALF_H - 20);
         white(renderer);
-        centerStr (
-                renderer,
-                message,
-                BUFFER_HALF_W,
-                BUFFER_HALF_H - 4
-        );
-        if (button(renderer, "Ok",
-                BUFFER_HALF_W - 64, BUFFER_HALF_H + 16, 128,
-                inputs->mouse.x, inputs->mouse.y) &&
-                mouseClicked(inputs)
-        ) {
-                	audio_play_click();
+        centerStr(renderer, message, BUFFER_HALF_W, BUFFER_HALF_H - 4);
+        if (button(renderer, T("COMMON_OK"), BUFFER_HALF_W - 64, BUFFER_HALF_H + 16, 128,
+                   inputs->mouse.x, inputs->mouse.y) &&
+            mouseClicked(inputs)) {
+                audio_play_click();
                 return 1;
         }
         return 0;
@@ -757,11 +644,8 @@ int state_err (SDL_Renderer *renderer, Inputs *inputs, char *message) {
  * Draws the heads up display, including the hotbar, offhand, crosshair, health,
  * hunger, chat history, and the debug menu if activated.
  */
-void popup_hud (
-        SDL_Renderer *renderer, Inputs *inputs, World *world,
-        int *debugOn, uint32_t *fps_now,
-        Player *player
-) {
+void popup_hud(SDL_Renderer *renderer, Inputs *inputs, World *world, int *debugOn,
+               uint32_t *fps_now, Player *player) {
         int i;
 
         static SDL_Rect hotbarRect;
@@ -784,17 +668,8 @@ void popup_hud (
 
         // Debug screen
         if (*debugOn) {
-                static char debugText [][32] = {
-                        "M4KC 0.7",
-                        "Seed: ",
-                        "X: ",
-                        "Y: ",
-                        "Z: ",
-                        "FPS: ",
-                        "ChunkX: ",
-                        "ChunkY: ",
-                        "ChunkZ: "
-                };
+                static char debugText[][32] = {
+                    "M4KC 0.7", "Seed: ", "X: ", "Y: ", "Z: ", "FPS: ", "ChunkX: ", "ChunkY: ", "ChunkZ: "};
 
                 // Seed
                 strnum(debugText[1], 6, world->seed);
@@ -817,76 +692,52 @@ void popup_hud (
                         drawBGStr(renderer, debugText[i], 0, i * 9);
                 }
 
-                // Chunk monitor
-                #ifndef small
-                #define CHUNKMONW   10
-                #define CHUNKMONCOL 9
+// Chunk monitor
+#ifndef small
+#define CHUNKMONW 10
+#define CHUNKMONCOL 9
 
-                SDL_Rect chunkMonitorRect = { 
-                        .x = 0,
-                        .y = 1 - CHUNKMONW,
-                        .w = CHUNKMONW,
-                        .h = CHUNKMONW
-                };
+                SDL_Rect chunkMonitorRect = {.x = 0, .y = 1 - CHUNKMONW, .w = CHUNKMONW, .h = CHUNKMONW};
                 for (i = 0; i < CHUNKARR_SIZE; i++) {
                         if (i % CHUNKMONCOL == 0) {
-                                chunkMonitorRect.x = BUFFER_W - (
-                                        (CHUNKMONW * (CHUNKMONCOL - 1)) + 2);
+                                chunkMonitorRect.x = BUFFER_W - ((CHUNKMONW * (CHUNKMONCOL - 1)) + 2);
                                 chunkMonitorRect.y += CHUNKMONW - 1;
                         } else {
                                 chunkMonitorRect.x += CHUNKMONW - 1;
                         }
 
                         int stamp = world->chunk[i].loaded;
-                        SDL_SetRenderDrawColor (
-                                renderer,
-                                (stamp & 0x03) * 64,
-                                (stamp & 0x0C) * 16,
-                                (stamp & 0x30) * 4,
-                                0xFF
-                        );
+                        SDL_SetRenderDrawColor(renderer, (stamp & 0x03) * 64, (stamp & 0x0C) * 16,
+                                               (stamp & 0x30) * 4, 0xFF);
                         SDL_RenderFillRect(renderer, &chunkMonitorRect);
                         white(renderer);
                         SDL_RenderDrawRect(renderer, &chunkMonitorRect);
                 }
 
-                #undef CHUNKMONW
-                #undef CHUNKMONCOL
-                #endif
+#undef CHUNKMONW
+#undef CHUNKMONCOL
+#endif
         }
-        
+
         // Hotbar
         tblack(renderer);
         SDL_RenderFillRect(renderer, &hotbarRect);
 
-        hotbarSelectRect.x =
-        BUFFER_HALF_W - 77 + player->inventory.hotbarSelect * 17;
+        hotbarSelectRect.x = BUFFER_HALF_W - 77 + player->inventory.hotbarSelect * 17;
         white(renderer);
         SDL_RenderDrawRect(renderer, &hotbarSelectRect);
 
         for (i = 0; i < 9; i++) {
-                drawSlot (
-                        renderer,
-                        &player->inventory.hotbar[i],
-                        BUFFER_HALF_W - 76 + i * 17,
-                        BUFFER_H - 17,
-                        inputs->mouse.x,
-                        inputs->mouse.y
-                );
+                drawSlot(renderer, &player->inventory.hotbar[i], BUFFER_HALF_W - 76 + i * 17, BUFFER_H - 17,
+                         inputs->mouse.x, inputs->mouse.y);
         }
 
         // Offhand
         if (player->inventory.offhand.blockid != 0) {
                 tblack(renderer);
                 SDL_RenderDrawRect(renderer, &offhandRect);
-                drawSlot (
-                        renderer,
-                        &player->inventory.offhand,
-                        1,
-                        BUFFER_H - 17,
-                        inputs->mouse.x,
-                        inputs->mouse.y
-                );
+                drawSlot(renderer, &player->inventory.offhand, 1, BUFFER_H - 17, inputs->mouse.x,
+                         inputs->mouse.y);
         }
 
         // Chat
@@ -895,10 +746,7 @@ void popup_hud (
                 chatDrawIndex = nmod(chatDrawIndex - 1, 11);
                 if (chatHistoryFade[chatDrawIndex] > 0) {
                         chatHistoryFade[chatDrawIndex]--;
-                        drawBGStr(
-                                renderer, chatHistory[chatDrawIndex],
-                                0, BUFFER_H - 32 - i * 9
-                        );
+                        drawBGStr(renderer, chatHistory[chatDrawIndex], 0, BUFFER_H - 32 - i * 9);
                 }
         }
 }
@@ -907,40 +755,28 @@ void popup_hud (
  * Draws and performs the input logic of a single inventory slot. Capable of
  * changing which slot is currently being dragged.
  */
-void manageInvSlot (
-        SDL_Renderer *renderer,
-        Inputs  *inputs,
-        int     x,
-        int     y,
-        InvSlot *current,
-        InvSlot *selected,
-        int     *dragging
-) {
-        if (drawSlot (
-                renderer,
-                current,
-                x, y,
-                inputs->mouse.x,
-                inputs->mouse.y
-        ) && mouseClicked(inputs)) {
-        	audio_play_click();
+void manageInvSlot(SDL_Renderer *renderer, Inputs *inputs, int x, int y, InvSlot *current,
+                   InvSlot *selected, int *dragging) {
+        if (drawSlot(renderer, current, x, y, inputs->mouse.x, inputs->mouse.y) &&
+            mouseClicked(inputs)) {
+                audio_play_click();
                 inputs->mouse.left = 0;
                 if (*dragging) {
                         // Place down item
                         if (current->blockid == 0) {
                                 *current  = *selected;
-                                *selected = (const InvSlot) { 0 };
+                                *selected = (const InvSlot){0};
                                 *dragging = 0;
                         } else if (current->blockid == selected->blockid) {
                                 InvSlot_transfer(current, selected);
                         } else {
                                 InvSlot_swap(current, selected);
                         }
-                        
+
                 } else if (current->blockid != 0) {
                         // Pick up item
                         *selected = *current;
-                        *current  = (const InvSlot) { 0 };
+                        *current  = (const InvSlot){0};
                         *dragging = 1;
                 }
         }
@@ -950,12 +786,7 @@ void manageInvSlot (
  * Allows the user to manage their inventory, rearranging the items inside of
  * it. Capable of closing itself.
  */
-void popup_inventory (
-        SDL_Renderer *renderer,
-        Inputs *inputs,
-        Player *player,
-        int *gamePopup
-) {     
+void popup_inventory(SDL_Renderer *renderer, Inputs *inputs, Player *player, int *gamePopup) {
         SDL_Rect inventoryRect;
         inventoryRect.x = BUFFER_HALF_W - 77;
         inventoryRect.y = (BUFFER_H - 18) / 2 - 26;
@@ -974,8 +805,8 @@ void popup_inventory (
         offhandRect.w = 18;
         offhandRect.h = 18;
 
-        static InvSlot selected = { 0 };
-        static int dragging = 0;
+        static InvSlot selected = {0};
+        static int dragging     = 0;
 
         // Inventory background
         tblack(renderer);
@@ -985,52 +816,29 @@ void popup_inventory (
 
         // Hotbar items
         for (int i = 0; i < HOTBAR_SIZE; i++) {
-                manageInvSlot (
-                        renderer, inputs,
-                        BUFFER_HALF_W - 76 + i * 17,
-                        BUFFER_H - 17,
-                        &player->inventory.hotbar[i],
-                        &selected,
-                        &dragging
-                );
+                manageInvSlot(renderer, inputs, BUFFER_HALF_W - 76 + i * 17, BUFFER_H - 17,
+                              &player->inventory.hotbar[i], &selected, &dragging);
         }
 
         // Inventory items
         for (int i = 0; i < INVENTORY_SIZE; i++) {
-                manageInvSlot (
-                        renderer, inputs,
-                        BUFFER_HALF_W - 76 + (i % HOTBAR_SIZE) * 17,
-                        inventoryRect.y + 1 + (i / HOTBAR_SIZE) * 17,
-                        &player->inventory.slots[i],
-                        &selected,
-                        &dragging
-                );
+                manageInvSlot(renderer, inputs, BUFFER_HALF_W - 76 + (i % HOTBAR_SIZE) * 17,
+                              inventoryRect.y + 1 + (i / HOTBAR_SIZE) * 17, &player->inventory.slots[i],
+                              &selected, &dragging);
         }
 
         // Offhand
-        manageInvSlot (
-                renderer, inputs,
-                1,
-                BUFFER_H - 17,
-                &player->inventory.offhand,
-                &selected,
-                &dragging
-        );
+        manageInvSlot(renderer, inputs, 1, BUFFER_H - 17, &player->inventory.offhand, &selected,
+                      &dragging);
 
         if (dragging) {
-                drawSlot (
-                        renderer,
-                        &selected,
-                        inputs->mouse.x - 8,
-                        inputs->mouse.y - 8,
-                        0, 0
-                );
+                drawSlot(renderer, &selected, inputs->mouse.x - 8, inputs->mouse.y - 8, 0, 0);
         }
-        
+
         // Exit inventory
         if (inputs->keyboard.e) {
                 inputs->keyboard.e = 0;
-                *gamePopup = POPUP_HUD;
+                *gamePopup         = POPUP_HUD;
         }
 }
 
@@ -1038,25 +846,18 @@ void popup_inventory (
  * Allows the user to type in chat, and view farther back in the message
  * history. Capable of closing itself.
  */
-void popup_chat (SDL_Renderer *renderer, Inputs *inputs, uint64_t gameTime) {
-        static char buffer[64] = { 0 };
-        static InputBuffer chatBox = {
-                .buffer = buffer,
-                .len    = 64,
-                .cursor = 0
-        };
-        
+void popup_chat(SDL_Renderer *renderer, Inputs *inputs, uint64_t gameTime) {
+        static char buffer[64]     = {0};
+        static InputBuffer chatBox = {.buffer = buffer, .len = 64, .cursor = 0};
+
         static SDL_Rect chatBoxRect = {0, 0, 0, 9};
-        chatBoxRect.y = BUFFER_H - 9;
-        chatBoxRect.w = BUFFER_W;
+        chatBoxRect.y               = BUFFER_H - 9;
+        chatBoxRect.w               = BUFFER_W;
 
         int chatDrawIndex = chatHistoryIndex;
         for (int i = 0; i < 11; i++) {
                 chatDrawIndex = nmod(chatDrawIndex - 1, 11);
-                drawBGStr(
-                        renderer, chatHistory[chatDrawIndex],
-                        0, BUFFER_H - 32 - i * 9
-                );
+                drawBGStr(renderer, chatHistory[chatDrawIndex], 0, BUFFER_H - 32 - i * 9);
         }
 
         // Get keyboard input
@@ -1066,71 +867,54 @@ void popup_chat (SDL_Renderer *renderer, Inputs *inputs, uint64_t gameTime) {
                 // 2:  ": " chars
                 // 1:  null
                 static char chatNameConcat[63 + 7 + 2 + 1];
-                snprintf (chatNameConcat,  63 + 7 + 2, "%s: %s",
-                        options.username.buffer, chatBox.buffer);
-                
+                snprintf(chatNameConcat, 63 + 7 + 2, "%s: %s", options.username.buffer, chatBox.buffer);
+
                 // Add input to chat
                 chatAdd(chatNameConcat);
                 // Clear input box
-                chatBox.cursor = 0;
+                chatBox.cursor    = 0;
                 chatBox.buffer[0] = 0;
         }
 
         // Chat input box
-        // If char limit is reached, give some visual
-        // feedback.
+        // If char limit is reached, give some visual feedback.
         if (chatBox.cursor == 63) {
                 SDL_SetRenderDrawColor(renderer, 128, 0, 0, 128);
         } else {
                 tblack(renderer);
         }
-        
+
         SDL_RenderFillRect(renderer, &chatBoxRect);
 
         white(renderer);
-        drawChar (
-                renderer,
-                95 + 32 * ((gameTime >> 6) % 2),
-                drawStr (
-                        renderer, chatBox.buffer,
-                        0, BUFFER_H - 8
-                ),
-                BUFFER_H - 8
-        );
+        drawChar(renderer, 95 + 32 * ((gameTime >> 6) % 2),
+                 drawStr(renderer, chatBox.buffer, 0, BUFFER_H - 8), BUFFER_H - 8);
 }
 
 /* popup_pause
  * Displays a pause menu. Capable of activating submenus or changing the game
  * state.
  */
-void popup_pause (
-        SDL_Renderer *renderer, Inputs *inputs,
-        int *gamePopup, int *gameState, World *world
-) {
-        if (button(renderer, "Back to Game",
-                BUFFER_HALF_W - 64, 20, 128,
-                inputs->mouse.x, inputs->mouse.y) &&
-                mouseClicked(inputs)
-        ) {
-                	audio_play_click();
+void popup_pause(SDL_Renderer *renderer, Inputs *inputs, int *gamePopup, int *gameState,
+                 World *world) {
+        if (button(renderer, T("PAUSE_BACK_TO_GAME"), BUFFER_HALF_W - 64, 20, 128, inputs->mouse.x,
+                   inputs->mouse.y) &&
+            mouseClicked(inputs)) {
+                audio_play_click();
                 *gamePopup = POPUP_HUD;
         }
 
-        if (button(renderer, "Options...",
-                BUFFER_HALF_W - 64, 42, 128,
-                inputs->mouse.x, inputs->mouse.y) &&
-                mouseClicked(inputs)
-        ) {
-                	audio_play_click();
+        if (button(renderer, T("PAUSE_OPTIONS"), BUFFER_HALF_W - 64, 42, 128, inputs->mouse.x,
+                   inputs->mouse.y) &&
+            mouseClicked(inputs)) {
+                audio_play_click();
                 *gamePopup = POPUP_OPTIONS;
         }
 
-        if (button(renderer, "Save and Quit",
-                BUFFER_HALF_W - 64, 64, 128,
-                inputs->mouse.x, inputs->mouse.y) &&
-                mouseClicked(inputs)
-        ) {
-                	audio_play_click();
+        if (button(renderer, T("PAUSE_SAVE_QUIT"), BUFFER_HALF_W - 64, 64, 128, inputs->mouse.x,
+                   inputs->mouse.y) &&
+            mouseClicked(inputs)) {
+                audio_play_click();
                 int err = World_save(world);
                 if (err) {
                         gameLoop_error("Could not save world");
@@ -1145,7 +929,7 @@ void popup_pause (
 /* popup_options
  * Shows an options screen. Capable of changing settings and closing itself.
  */
-void popup_options (SDL_Renderer *renderer, Inputs *inputs, int *gamePopup) {
+void popup_options(SDL_Renderer *renderer, Inputs *inputs, int *gamePopup) {
         if (menu_optionsMain(renderer, inputs)) {
                 *gamePopup = 1;
         }
@@ -1156,40 +940,32 @@ void popup_options (SDL_Renderer *renderer, Inputs *inputs, int *gamePopup) {
  * Shows a menu listing advanced debug tools. These are only included in debug
  * builds and are not included in compressed executables.
  */
-void popup_debugTools (SDL_Renderer *renderer, Inputs *inputs, int *gamePopup) {
-        if (button(renderer, "Chunk Peek",
-                BUFFER_HALF_W - 64, 20, 128,
-                inputs->mouse.x, inputs->mouse.y) &&
-                mouseClicked(inputs)
-        ) {
-                	audio_play_click();
+void popup_debugTools(SDL_Renderer *renderer, Inputs *inputs, int *gamePopup) {
+        if (button(renderer, "Chunk Peek", BUFFER_HALF_W - 64, 20, 128, inputs->mouse.x,
+                   inputs->mouse.y) &&
+            mouseClicked(inputs)) {
+                audio_play_click();
                 *gamePopup = POPUP_CHUNK_PEEK;
         }
-        
-        if (button(renderer, "All Chunks",
-                BUFFER_HALF_W - 64, 42, 128,
-                inputs->mouse.x, inputs->mouse.y) &&
-                mouseClicked(inputs)
-        ) {
-                	audio_play_click();
+
+        if (button(renderer, "All Chunks", BUFFER_HALF_W - 64, 42, 128, inputs->mouse.x,
+                   inputs->mouse.y) &&
+            mouseClicked(inputs)) {
+                audio_play_click();
                 *gamePopup = POPUP_ROLL_CALL;
         }
-        
-        if (button(renderer, "World overview",
-                BUFFER_HALF_W - 64, 64, 128,
-                inputs->mouse.x, inputs->mouse.y) &&
-                mouseClicked(inputs)
-        ) {
-                	audio_play_click();
+
+        if (button(renderer, "World overview", BUFFER_HALF_W - 64, 64, 128, inputs->mouse.x,
+                   inputs->mouse.y) &&
+            mouseClicked(inputs)) {
+                audio_play_click();
                 *gamePopup = POPUP_OVERVIEW;
         }
 
-        if (button(renderer, "Done",
-                BUFFER_HALF_W - 64, 86, 128,
-                inputs->mouse.x, inputs->mouse.y) &&
-                mouseClicked(inputs)
-        ) {
-                	audio_play_click();
+        if (button(renderer, T("COMMON_DONE"), BUFFER_HALF_W - 64, 86, 128, inputs->mouse.x,
+                   inputs->mouse.y) &&
+            mouseClicked(inputs)) {
+                audio_play_click();
                 *gamePopup = POPUP_HUD;
         }
 }
@@ -1198,37 +974,22 @@ void popup_debugTools (SDL_Renderer *renderer, Inputs *inputs, int *gamePopup) {
  * Shows a 3D map of the current chunk, with the ability to view a cross-section
  * of it. This feature is only included in debug builds.
  */
-void popup_chunkPeek (
-        SDL_Renderer *renderer, Inputs *inputs, World *world,
-        int *gamePopup,
-        Player *player
-) {
+void popup_chunkPeek(SDL_Renderer *renderer, Inputs *inputs, World *world, int *gamePopup,
+                     Player *player) {
         static int chunkPeekRYMax = 0;
 
-        int chunkPeekRX,
-            chunkPeekRY,
-            chunkPeekRZ,
-            chunkPeekColor;
-        
-        Chunk *debugChunk;
-        char chunkPeekText[][32] = {
-                "coordHash: ",
-                "loaded: "
-        };
+        int chunkPeekRX, chunkPeekRY, chunkPeekRZ, chunkPeekColor;
 
-        debugChunk = chunkLookup (
-                world,
-                (int)player->pos.x,
-                (int)player->pos.y,
-                (int)player->pos.z
-        );
+        Chunk *debugChunk;
+        char chunkPeekText[][32] = {"coordHash: ", "loaded: "};
+
+        debugChunk = chunkLookup(world, (int)player->pos.x, (int)player->pos.y, (int)player->pos.z);
 
         white(renderer);
         if (debugChunk != NULL) {
-                // There is a chunk to display info about. Process
-                // strings.
-                strnum(chunkPeekText[0], 11, debugChunk -> coordHash);
-                strnum(chunkPeekText[1], 8,  debugChunk -> loaded);
+                // There is a chunk to display info about. Process strings.
+                strnum(chunkPeekText[0], 11, debugChunk->coordHash);
+                strnum(chunkPeekText[1], 8, debugChunk->loaded);
                 // Draw the strings
                 for (int i = 0; i < 2; i++) {
                         drawStr(renderer, chunkPeekText[i], 0, i << 3);
@@ -1237,113 +998,71 @@ void popup_chunkPeek (
                 // Scroll wheel for changing chunk map xray
                 if (inputs->mouse.wheel != 0) {
                         chunkPeekRYMax -= inputs->mouse.wheel;
-                        chunkPeekRYMax = nmod(chunkPeekRYMax, 64);
+                        chunkPeekRYMax      = nmod(chunkPeekRYMax, 64);
                         inputs->mouse.wheel = 0;
                 }
 
                 // Mouse for changing chunk map xray
-                if (
-                        inputs->mouse.x > 128 &&
-                        inputs->mouse.y < 64  &&
-                        inputs->mouse.left
-                ) chunkPeekRYMax = inputs->mouse.y;
+                if (inputs->mouse.x > 128 && inputs->mouse.y < 64 && inputs->mouse.left)
+                        chunkPeekRYMax = inputs->mouse.y;
 
                 // Up/Down buttons for changing chunk map xray
-                if (button(renderer, "UP",
-                        4, 56, 64,
-                        inputs->mouse.x, inputs->mouse.y)
-                        && mouseClicked(inputs)
-                ) {
-                        	audio_play_click();
+                if (button(renderer, T("COMMON_UP"), 4, 56, 64, inputs->mouse.x, inputs->mouse.y) &&
+                    mouseClicked(inputs)) {
+                        audio_play_click();
                         chunkPeekRYMax = nmod(chunkPeekRYMax - 1, 64);
                 }
 
-                if (button(renderer, "DOWN",
-                        4, 78, 64,
-                        inputs->mouse.x, inputs->mouse.y)
-                        && mouseClicked(inputs)
-                ) {
-                        	audio_play_click();
+                if (button(renderer, T("COMMON_DOWN"), 4, 78, 64, inputs->mouse.x, inputs->mouse.y) &&
+                    mouseClicked(inputs)) {
+                        audio_play_click();
                         chunkPeekRYMax = nmod(chunkPeekRYMax + 1, 64);
                 }
 
                 // Draw chunk map
                 white(renderer);
-                SDL_RenderDrawLine (
-                        renderer,
-                        128, chunkPeekRYMax,
-                        191, chunkPeekRYMax
-                );
-                
-                for (
-                        chunkPeekRY = 64;
-                        chunkPeekRY >= chunkPeekRYMax;
-                        chunkPeekRY--
-                ) for (
-                        chunkPeekRX = 0;
-                        chunkPeekRX < 64;
-                        chunkPeekRX++
-                ) for (
-                        chunkPeekRZ = 0;
-                        chunkPeekRZ < 63;
-                        chunkPeekRZ++
-                ) {
-                        Block currentBlock = debugChunk->blocks [
-                                chunkPeekRX +
-                                (chunkPeekRY << 6) +
-                                (chunkPeekRZ << 12)];
-                        
-                        chunkPeekColor = textures [
-                                currentBlock * 256 * 3 + 6 * 16];
+                SDL_RenderDrawLine(renderer, 128, chunkPeekRYMax, 191, chunkPeekRYMax);
 
-                        if (chunkPeekColor) {
-                                int alpha = 255;
-                                
-                                if (currentBlock == BLOCK_WATER) {
-                                        alpha = 64;
+                for (chunkPeekRY = 64; chunkPeekRY >= chunkPeekRYMax; chunkPeekRY--)
+                        for (chunkPeekRX = 0; chunkPeekRX < 64; chunkPeekRX++)
+                                for (chunkPeekRZ = 0; chunkPeekRZ < 63; chunkPeekRZ++) {
+                                        Block currentBlock =
+                                            debugChunk->blocks[chunkPeekRX + (chunkPeekRY << 6) + (chunkPeekRZ << 12)];
+
+                                        chunkPeekColor = textures[currentBlock * 256 * 3 + 6 * 16];
+
+                                        if (chunkPeekColor) {
+                                                int alpha = 255;
+
+                                                if (currentBlock == BLOCK_WATER) {
+                                                        alpha = 64;
+                                                }
+
+                                                SDL_SetRenderDrawColor(renderer, (chunkPeekColor >> 16 & 0xFF),
+                                                                       (chunkPeekColor >> 8 & 0xFF),
+                                                                       (chunkPeekColor & 0xFF), alpha);
+
+                                                SDL_RenderDrawPoint(renderer, chunkPeekRX + 128, chunkPeekRY + chunkPeekRZ);
+
+                                                // A little shadow for depth
+                                                SDL_SetRenderDrawColor(renderer, 0, 0, 0, 64);
+
+                                                SDL_RenderDrawPoint(renderer, chunkPeekRX + 128,
+                                                                    chunkPeekRY + chunkPeekRZ + 1);
+                                        }
                                 }
-                        
-                                SDL_SetRenderDrawColor (
-                                        renderer,
-                                        (chunkPeekColor >> 16 & 0xFF),
-                                        (chunkPeekColor >> 8 & 0xFF),
-                                        (chunkPeekColor & 0xFF),
-                                        alpha);
-                                
-                                SDL_RenderDrawPoint (
-                                        renderer,
-                                        chunkPeekRX + 128,
-                                        chunkPeekRY + chunkPeekRZ);
-                                        
-                                // A little shadow for depth
-                                SDL_SetRenderDrawColor (
-                                        renderer,
-                                        0, 0, 0, 64);
-                                
-                                SDL_RenderDrawPoint (
-                                        renderer,
-                                        chunkPeekRX + 128,
-                                        chunkPeekRY + chunkPeekRZ + 1);
-                        }
-                }
         } else {
-                drawStr(renderer, "Chunk not found", 0, 0); 
+                drawStr(renderer, T("DEBUG_CHUNK_NOT_FOUND"), 0, 0);
         }
 
-        if (button(renderer, "Done",
-                4, 100, 64,
-                inputs->mouse.x, inputs->mouse.y)
-                && mouseClicked(inputs)
-        ) {
-                	audio_play_click();
+        if (button(renderer, T("COMMON_DONE"), 4, 100, 64, inputs->mouse.x, inputs->mouse.y) &&
+            mouseClicked(inputs)) {
+                audio_play_click();
                 *gamePopup = POPUP_ADVANCED_DEBUG;
         }
 }
 
-void popup_rollCall (
-        SDL_Renderer *renderer, Inputs *inputs, World *world,
-        int *gamePopup
-) {
+void popup_rollCall(SDL_Renderer *renderer, Inputs *inputs, World *world, int *gamePopup) {
         static int scroll = 0;
 
         if (inputs->mouse.wheel != 0) {
@@ -1351,95 +1070,86 @@ void popup_rollCall (
                 inputs->mouse.wheel = 0;
         }
 
-        if (scroll > 0) { scroll = 0; }
-        if (scroll < 1 - CHUNKARR_SIZE) { scroll = 1 - CHUNKARR_SIZE; }
+        if (scroll > 0) {
+                scroll = 0;
+        }
+        if (scroll < 1 - CHUNKARR_SIZE) {
+                scroll = 1 - CHUNKARR_SIZE;
+        }
 
         white(renderer);
         drawStr(renderer, "x    y    z   stmp    hash", 8, 10);
 
-        for (int index = 0; index < CHUNKARR_SIZE; index ++) {
+        for (int index = 0; index < CHUNKARR_SIZE; index++) {
                 Chunk *chunk = &world->chunk[index];
                 char chunkDescription[32];
                 white(renderer);
 
                 int topMargin = 28;
-                int y = (index + scroll) * 8 + topMargin;
-                if (y < topMargin || y >= BUFFER_H) { continue; }
-                
+                int y         = (index + scroll) * 8 + topMargin;
+                if (y < topMargin || y >= BUFFER_H) {
+                        continue;
+                }
+
                 snprintf(chunkDescription, 32, "%i", chunk->center.x - 32);
-                drawStr(renderer, chunkDescription, 0,   y);
+                drawStr(renderer, chunkDescription, 0, y);
                 snprintf(chunkDescription, 32, "%i", chunk->center.y - 32);
-                drawStr(renderer, chunkDescription, 24,  y);
+                drawStr(renderer, chunkDescription, 24, y);
                 snprintf(chunkDescription, 32, "%i", chunk->center.z - 32);
-                drawStr(renderer, chunkDescription, 48,  y);
-                
+                drawStr(renderer, chunkDescription, 48, y);
+
                 snprintf(chunkDescription, 32, "#%i", chunk->loaded);
-                drawStr(renderer, chunkDescription, 72,  y);
+                drawStr(renderer, chunkDescription, 72, y);
                 snprintf(chunkDescription, 32, "%016x", chunk->coordHash);
-                drawStr(renderer, chunkDescription, 96,  y);
+                drawStr(renderer, chunkDescription, 96, y);
         }
 
-        if (button(renderer, "Done",
-                BUFFER_W - 6 - 32, 6, 32,
-                inputs->mouse.x, inputs->mouse.y)
-                && mouseClicked(inputs)
-        ) {
-                	audio_play_click();
+        if (button(renderer, T("COMMON_DONE"), BUFFER_W - 6 - 32, 6, 32, inputs->mouse.x,
+                   inputs->mouse.y) &&
+            mouseClicked(inputs)) {
+                audio_play_click();
                 *gamePopup = POPUP_ADVANCED_DEBUG;
         }
 }
 
-void popup_overview (
-        SDL_Renderer *renderer, Inputs *inputs, World *world,
-        int *gamePopup
-) {
+void popup_overview(SDL_Renderer *renderer, Inputs *inputs, World *world, int *gamePopup) {
         (void)(world);
 
         int worldEndingBound   = CHUNK_SIZE * (CHUNKARR_RAD + 1);
         int worldStartingBound = CHUNK_SIZE * CHUNKARR_RAD * -1;
         for (int y = worldEndingBound; y > worldStartingBound; y -= 4)
-        for (int x = worldStartingBound; x < worldEndingBound; x += 4)
-        for (int z = worldStartingBound; z < worldEndingBound; z += 4) {
-                int projectX = (x - z) / 4;
-                int projectY = ((x + z) / 2 + y) / 4;
-        
-                Block currentBlock = World_getBlock(world, x, y, z);
-                int color;
-                int alpha = 255;
+                for (int x = worldStartingBound; x < worldEndingBound; x += 4)
+                        for (int z = worldStartingBound; z < worldEndingBound; z += 4) {
+                                int projectX = (x - z) / 4;
+                                int projectY = ((x + z) / 2 + y) / 4;
 
-                if (currentBlock < NUMBER_OF_BLOCKS) {
-                        color = textures[currentBlock * 256 * 3 + 6 * 16];
-                } else {
-                        color = 0xFF0000;
-                        alpha = 0;
-                }
+                                Block currentBlock = World_getBlock(world, x, y, z);
+                                int color;
+                                int alpha = 255;
 
-                if (color != 0) {
-                        if (currentBlock == BLOCK_WATER) {
-                                alpha = 64;
+                                if (currentBlock < NUMBER_OF_BLOCKS) {
+                                        color = textures[currentBlock * 256 * 3 + 6 * 16];
+                                } else {
+                                        color = 0xFF0000;
+                                        alpha = 0;
+                                }
+
+                                if (color != 0) {
+                                        if (currentBlock == BLOCK_WATER) {
+                                                alpha = 64;
+                                        }
+
+                                        SDL_SetRenderDrawColor(renderer, (color >> 16 & 0xFF), (color >> 8 & 0xFF),
+                                                               (color & 0xFF), alpha);
+
+                                        SDL_RenderDrawPoint(renderer, projectX + BUFFER_HALF_W, projectY + 32);
+                                }
                         }
-                
-                        SDL_SetRenderDrawColor (
-                                renderer,
-                                (color >> 16 & 0xFF),
-                                (color >> 8 & 0xFF),
-                                (color & 0xFF),
-                                alpha);
-                        
-                        SDL_RenderDrawPoint (
-                                renderer,
-                                projectX + BUFFER_HALF_W,
-                                projectY + 32);
-                }
-        }
-        
 
-        if (button(renderer, "Done",
-                BUFFER_W - 6 - 32, 6, 32,
-                inputs->mouse.x, inputs->mouse.y)
-                && mouseClicked(inputs)
-        ) {
-                	audio_play_click();
+        if (button(renderer, T("COMMON_DONE"), BUFFER_W - 6 - 32, 6, 32, inputs->mouse.x,
+                   inputs->mouse.y) &&
+            mouseClicked(inputs)) {
+                audio_play_click();
                 *gamePopup = POPUP_ADVANCED_DEBUG;
         }
 }
@@ -1451,44 +1161,51 @@ void popup_overview (
  * Returns 1 when the user pressed the "Done" button. Capable of changing
  * settings.
  */
-static int menu_optionsMain (SDL_Renderer *renderer, Inputs *inputs) {
+static int menu_optionsMain(SDL_Renderer *renderer, Inputs *inputs) {
         static int page = 0;
 
         switch (page) {
         case 0:
                 manageInputBuffer(&options.username, inputs);
-                input (renderer, "Username", options.username.buffer,
-                        BUFFER_HALF_W - 64, 20, 128,
-                        inputs->mouse.x, inputs->mouse.y, 1);
+                input(renderer, T("OPTIONS_USERNAME"), options.username.buffer, BUFFER_HALF_W - 64, 20, 128,
+                      inputs->mouse.x, inputs->mouse.y, 1);
 
-                static char *trapMouseTexts[] = {
-                        "Capture Mouse: OFF",
-                        "Capture Mouse: ON"
-                };
-                if (button(renderer, trapMouseTexts[options.trapMouse],
-                        BUFFER_HALF_W - 64, 42, 128,
-                        inputs->mouse.x, inputs->mouse.y) &&
-                        mouseClicked(inputs)
-                ) {
-                        	audio_play_click();
+                const char *trapMouseTexts[] = {T("OPTIONS_MOUSE_CAPTURE_OFF"),
+                                                T("OPTIONS_MOUSE_CAPTURE_ON")};
+                if (button(renderer, trapMouseTexts[options.trapMouse], BUFFER_HALF_W - 64, 42, 128,
+                           inputs->mouse.x, inputs->mouse.y) &&
+                    mouseClicked(inputs)) {
+                        audio_play_click();
                         options.trapMouse = !options.trapMouse;
                 }
-                break;
-        case 1:
-                ;static char drawDistanceText[20] = { 0 };
-                if (!drawDistanceText[0]) {
-                        snprintf (
-                                drawDistanceText, 20,
-                                "Draw distance: %i",
-                                options.drawDistance);
+
+                if (button(renderer, T("LANG_NAME"), BUFFER_HALF_W - 64, 64, 128, inputs->mouse.x,
+                           inputs->mouse.y) &&
+                    mouseClicked(inputs)) {
+                        audio_play_click();
+                        int cur = 0;
+                        for (int i = 0; i < g_lang_count; i++) {
+                                if (strcmp(g_available_langs[i], options.lang) == 0) {
+                                        cur = i;
+                                        break;
+                                }
+                        }
+                        cur = (cur + 1) % (g_lang_count > 0 ? g_lang_count : 1);
+                        strncpy(options.lang, g_available_langs[cur], sizeof(options.lang) - 1);
+                        options.lang[sizeof(options.lang) - 1] = '\0';
+                        loc_load(options.lang);
                 }
-                
-                if (button(renderer, drawDistanceText,
-                        BUFFER_HALF_W - 64, 20, 128,
-                        inputs->mouse.x, inputs->mouse.y) &&
-                        mouseClicked(inputs)
-                ) {
-                        	audio_play_click();
+                break;
+        case 1:;
+                static char drawDistanceText[20] = {0};
+                if (!drawDistanceText[0]) {
+                        snprintf(drawDistanceText, 20, "Draw distance: %i", options.drawDistance);
+                }
+
+                if (button(renderer, drawDistanceText, BUFFER_HALF_W - 64, 20, 128, inputs->mouse.x,
+                           inputs->mouse.y) &&
+                    mouseClicked(inputs)) {
+                        audio_play_click();
                         switch (options.drawDistance) {
                         case 20:
                                 options.drawDistance = 32;
@@ -1509,81 +1226,75 @@ static int menu_optionsMain (SDL_Renderer *renderer, Inputs *inputs) {
                         strnum(drawDistanceText, 15, options.drawDistance);
                 }
 
-                static char *fovTexts[] = {
-                        "FOV: Low",
-                        "FOV: Medium",
-                        "FOV: High",
-                        "FOV: ?"
-                };
-                char *fovText = NULL;
+                const char *fovTexts[] = {T("OPTIONS_FOV_LOW"), T("OPTIONS_FOV_MEDIUM"),
+                                          T("OPTIONS_FOV_HIGH"), T("OPTIONS_FOV_UNKNOWN")};
+                const char *fovText    = NULL;
                 switch ((int)options.fov) {
-                        default:  fovText = fovTexts[3]; break;
-                        case 60:  fovText = fovTexts[2]; break;
-                        case 90:  fovText = fovTexts[1]; break;
-                        case 140: fovText = fovTexts[0]; break;
-                }
-                
-                if (button(renderer, fovText,
-                        BUFFER_HALF_W - 64, 42, 128,
-                        inputs->mouse.x, inputs->mouse.y) &&
-                        mouseClicked(inputs)
-                ) {
-                        	audio_play_click();
-                        switch ((int)options.fov) {
-                                case 60: options.fov = 140; break;
-                                case 90: options.fov = 60;  break;
-                                default: options.fov = 90;  break;
-                        }
-                        
+                default:
+                        fovText = fovTexts[3];
+                        break;
+                case 60:
+                        fovText = fovTexts[2];
+                        break;
+                case 90:
+                        fovText = fovTexts[1];
+                        break;
+                case 140:
+                        fovText = fovTexts[0];
+                        break;
                 }
 
-                static char *fogTexts[] = {
-                        "Fog: Gradual",
-                        "Fog: Sharp"
-                };
-                if (button(renderer, fogTexts[options.fogType],
-                        BUFFER_HALF_W - 64, 64, 128,
-                        inputs->mouse.x, inputs->mouse.y) &&
-                        mouseClicked(inputs)
-                ) {
-                        	audio_play_click();
+                if (button(renderer, fovText, BUFFER_HALF_W - 64, 42, 128, inputs->mouse.x,
+                           inputs->mouse.y) &&
+                    mouseClicked(inputs)) {
+                        audio_play_click();
+                        switch ((int)options.fov) {
+                        case 60:
+                                options.fov = 140;
+                                break;
+                        case 90:
+                                options.fov = 60;
+                                break;
+                        default:
+                                options.fov = 90;
+                                break;
+                        }
+                }
+
+                const char *fogTexts[] = {T("OPTIONS_FOG_GRADUAL"), T("OPTIONS_FOG_SHARP")};
+                if (button(renderer, fogTexts[options.fogType], BUFFER_HALF_W - 64, 64, 128,
+                           inputs->mouse.x, inputs->mouse.y) &&
+                    mouseClicked(inputs)) {
+                        audio_play_click();
                         options.fogType = !options.fogType;
                 }
-                
+
                 break;
         }
 
-        if (button(renderer, "<",
-                BUFFER_HALF_W - 86, 20, 16,
-                inputs->mouse.x, inputs->mouse.y) &&
-                mouseClicked(inputs)
-        ) {
-                	audio_play_click();
-                page --;
+        if (button(renderer, "<", BUFFER_HALF_W - 86, 20, 16, inputs->mouse.x, inputs->mouse.y) &&
+            mouseClicked(inputs)) {
+                audio_play_click();
+                page--;
                 page = nmod(page, 2);
         }
 
-        if (button(renderer, ">",
-                BUFFER_HALF_W + 70, 20, 16,
-                inputs->mouse.x, inputs->mouse.y) &&
-                mouseClicked(inputs)
-        ) {
-                	audio_play_click();
-                page ++;
+        if (button(renderer, ">", BUFFER_HALF_W + 70, 20, 16, inputs->mouse.x, inputs->mouse.y) &&
+            mouseClicked(inputs)) {
+                audio_play_click();
+                page++;
                 page = nmod(page, 2);
         }
 
-        if (button(renderer, "Done",
-                BUFFER_HALF_W - 64, 86, 128,
-                inputs->mouse.x, inputs->mouse.y) &&
-                mouseClicked(inputs)
-        ) {
-                	audio_play_click();
+        if (button(renderer, T("COMMON_DONE"), BUFFER_HALF_W - 64, 86, 128, inputs->mouse.x,
+                   inputs->mouse.y) &&
+            mouseClicked(inputs)) {
+                audio_play_click();
                 int err = options_save();
                 if (err) {
                         gameLoop_error("Could not save options");
                 }
-        
+
                 page = 0;
                 return 1;
         }

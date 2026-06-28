@@ -1,23 +1,27 @@
 # TO-DO List for TerraM4KC
 
 ### NOTE:
-- [] = NOT WORKED ON YET/BIG W.I.P
+
+- [ ] = NOT WORKED ON YET/BIG W.I.P
 - [-] HALFWAY FINISHED/NOT BUG TESTED
 - [x] = FINISHED/BUG TESTED
 - [?] = THINKING ABOUT IT IF I SHOULD USE OR NOT
 
 ## Internal category
-- Discord RPC [x]
-- Debug support [-]
-- Android support [] (There is a leftover [`dpad.h`](./src/android/dpad.h) that was supposedly used for the DPad, but it's kept as a placeholder.) 
-- Raycasting replacement with shaders and GLSL [?]
-- Plugin support []
-- Debug support [-] (ImGui keeps misbehaving.) 
-- Dedicated server [] (really big, might not finish it)
+
+- [x] Discord RPC
+- [-] Debug support
+- [-] Android support (really big, 90% wont do it)
+- [?] Raycasting replacement with shaders and GLSL (might be too big)
+- [ ] Plugin support
+- [x] Debug support
+- [ ] Dedicated server (really big, might not finish it)
+- [-] Audio support (only menu clicking is implemented)
 
 ## Gameplay category
-- Audio support [x] 
-- Biome generation []
-- Actual player models with textures [-]
-- Localization [-] (Only 2 finished, not implemented)
-- Infinite world generation []
+
+- [x] Audio support
+- [ ] Biome generation (needs reworking terrain generation)
+- [-] Actual player models with textures
+- [x] Localization (system implemented, only 3 languages supported)
+- [ ] Infinite world generation (needs reworking some stuff)

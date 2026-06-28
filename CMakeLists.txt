@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.10)
 project(terram4kc VERSION 0.1.0 LANGUAGES C CXX)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Options
 option(TERRAM4KC_SMALL "Build optimized small binary" OFF)
@@ -18,10 +19,10 @@ if(WIN32)
     if(DEFINED ENV{SDL2_DIR})
         set(SDL2_DIR $ENV{SDL2_DIR})
     endif()
-    
+
     if(EXISTS "${CMAKE_SOURCE_DIR}/win/SDL2/include/SDL2/SDL.h")
         set(SDL2_INCLUDE_DIRS "${CMAKE_SOURCE_DIR}/win/SDL2/include/SDL2")
-        set(SDL2_LIBRARIES 
+        set(SDL2_LIBRARIES
             "${CMAKE_SOURCE_DIR}/win/SDL2/lib/libSDL2.dll.a"
             # "${CMAKE_SOURCE_DIR}/win/SDL2/lib/libSDL2main.a"
         )
@@ -81,6 +82,36 @@ else()
         endif()
     endif()
 endif()
+
+if(WIN32)
+    if(EXISTS "${CMAKE_SOURCE_DIR}/win/SDL2_image/include/SDL2/SDL_image.h")
+        set(SDL2_IMAGE_INCLUDE_DIRS "${CMAKE_SOURCE_DIR}/win/SDL2_image/include/SDL2")
+        if(EXISTS "${CMAKE_SOURCE_DIR}/win/SDL2_image/lib/libSDL2_image.dll.a")
+            set(SDL2_IMAGE_LIBRARIES "${CMAKE_SOURCE_DIR}/win/SDL2_image/lib/libSDL2_image.dll.a")
+            message(STATUS "Using bundled SDL2_image (MinGW) from win/SDL2_image/")
+        else()
+            message(FATAL_ERROR "SDL2_image headers found but no library in win/SDL2_image/lib/")
+        endif()
+    else()
+        message(FATAL_ERROR "SDL2_image not found in win/SDL2_image/.")
+    endif()
+else()
+    find_package(PkgConfig QUIET)
+    if(PkgConfig_FOUND)
+        pkg_check_modules(SDL2_IMAGE QUIET SDL2_image)
+    endif()
+    if(NOT SDL2_IMAGE_FOUND)
+        find_library(SDL2_IMAGE_LIBRARY SDL2_image)
+        find_path(SDL2_IMAGE_INCLUDE_DIR SDL_image.h PATH_SUFFIXES SDL2)
+        if(SDL2_IMAGE_LIBRARY AND SDL2_IMAGE_INCLUDE_DIR)
+            set(SDL2_IMAGE_LIBRARIES ${SDL2_IMAGE_LIBRARY})
+            set(SDL2_IMAGE_INCLUDE_DIRS ${SDL2_IMAGE_INCLUDE_DIR})
+        else()
+            message(FATAL_ERROR "SDL2_image not found. Install libsdl2-image-dev or similar.")
+        endif()
+    endif()
+endif()
+
 
 # Discord RPC setup
 if(TERRAM4KC_DISCORD_RPC)
@@ -142,6 +173,7 @@ set(SOURCES
     src/textures.c
     src/utility.c
     src/imgui_renderer.cpp
+    src/loc.c
 )
 
 set(HEADERS
@@ -165,6 +197,7 @@ set(HEADERS
     src/audio.h
     src/discord_presence.h
     src/imgui_renderer.h
+    src/loc.h
 )
 
 # Dear ImGui (SDL2 + SDLRenderer2 backends)
@@ -189,8 +222,8 @@ set_target_properties(imgui PROPERTIES LINKER_LANGUAGE CXX)
 
 add_executable(m4kc ${SOURCES} ${HEADERS})
 
-target_include_directories(m4kc PRIVATE ${SDL2_INCLUDE_DIRS} ${SDL2_NET_INCLUDE_DIRS} src)
-target_link_libraries(m4kc PRIVATE imgui ${SDL2_LIBRARIES} ${SDL2_NET_LIBRARIES})
+target_include_directories(m4kc PRIVATE ${SDL2_INCLUDE_DIRS} ${SDL2_NET_INCLUDE_DIRS} ${SDL2_IMAGE_INCLUDE_DIRS} src)
+target_link_libraries(m4kc PRIVATE imgui ${SDL2_LIBRARIES} ${SDL2_NET_LIBRARIES} ${SDL2_IMAGE_LIBRARIES})
 
 # Discord RPC compile definitions and linking
 if(TERRAM4KC_DISCORD_RPC)
@@ -205,7 +238,7 @@ endif()
 # Platform-specific
 if(WIN32)
     # set_target_properties(m4kc PROPERTIES WIN32_EXECUTABLE TRUE)
-    
+
     # Copy SDL2.dll
     if(EXISTS "${CMAKE_SOURCE_DIR}/win/SDL2.dll")
         add_custom_command(TARGET m4kc POST_BUILD
@@ -223,7 +256,7 @@ if(WIN32)
             COMMENT "Copying SDL2.dll from bin"
         )
     endif()
-    
+
     # Copy SDL2_net.dll
     if(EXISTS "${CMAKE_SOURCE_DIR}/win/SDL2_net/include/SDL2/SDL_net.h")
         add_custom_command(TARGET m4kc POST_BUILD
@@ -233,7 +266,46 @@ if(WIN32)
             COMMENT "Copying SDL2_net.dll"
         )
     endif()
-    
+
+    if(EXISTS "${CMAKE_SOURCE_DIR}/win/SDL2_image/include/SDL2/SDL_image.h")
+        add_custom_command(TARGET m4kc POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_SOURCE_DIR}/win/SDL2_image/bin/SDL2_image.dll"
+            ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+            COMMENT "Copying SDL2_image.dll"
+        )
+    endif()
+
+    # SDL2_image finding — bundled in win/
+    if(WIN32)
+        if(EXISTS "${CMAKE_SOURCE_DIR}/win/SDL2_image/include/SDL2/SDL_image.h")
+            set(SDL2_IMAGE_INCLUDE_DIRS "${CMAKE_SOURCE_DIR}/win/SDL2_image/include/SDL2")
+            if(EXISTS "${CMAKE_SOURCE_DIR}/win/SDL2_image/lib/libSDL2_image.dll.a")
+                set(SDL2_IMAGE_LIBRARIES "${CMAKE_SOURCE_DIR}/win/SDL2_image/lib/libSDL2_image.dll.a")
+                message(STATUS "Using bundled SDL2_image (MinGW) from win/SDL2_image/")
+            else()
+                message(FATAL_ERROR "SDL2_image headers found but no library in win/SDL2_image/lib/")
+            endif()
+        else()
+            message(FATAL_ERROR "SDL2_image not found in win/SDL2_image/. Download from https://github.com/libsdl-org/SDL_image/releases")
+        endif()
+    else()
+        find_package(PkgConfig QUIET)
+        if(PkgConfig_FOUND)
+            pkg_check_modules(SDL2_IMAGE QUIET SDL2_image)
+        endif()
+        if(NOT SDL2_IMAGE_FOUND)
+            find_library(SDL2_IMAGE_LIBRARY SDL2_image)
+            find_path(SDL2_IMAGE_INCLUDE_DIR SDL_image.h PATH_SUFFIXES SDL2)
+            if(SDL2_IMAGE_LIBRARY AND SDL2_IMAGE_INCLUDE_DIR)
+                set(SDL2_IMAGE_LIBRARIES ${SDL2_IMAGE_LIBRARY})
+                set(SDL2_IMAGE_INCLUDE_DIRS ${SDL2_IMAGE_INCLUDE_DIR})
+            else()
+                message(FATAL_ERROR "SDL2_image not found. Install libsdl2-image-dev or similar.")
+            endif()
+        endif()
+    endif()
+
     # Copy Discord RPC DLL if enabled
     if(TERRAM4KC_DISCORD_RPC AND EXISTS "${DISCORD_RPC_DLL}")
         add_custom_command(TARGET m4kc POST_BUILD
@@ -252,9 +324,9 @@ if(WIN32)
     )
         find_file(MINGW_DLL_PATH_${MINGW_DLL} ${MINGW_DLL}
             PATHS
-                "C:/msys64/mingw64/bin"
-                "C:/mingw64/bin"
-                "C:/mingw/bin"
+            "C:/msys64/mingw64/bin"
+            "C:/mingw64/bin"
+            "C:/mingw/bin"
             NO_DEFAULT_PATH
         )
         if(MINGW_DLL_PATH_${MINGW_DLL})
@@ -283,6 +355,15 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/assets")
     )
 endif()
 
+if(EXISTS "${CMAKE_SOURCE_DIR}/lang")
+    add_custom_command(TARGET m4kc POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_SOURCE_DIR}/lang"
+        ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lang
+        COMMENT "Copying lang folder"
+    )
+endif()
+
 # Compiler flags
 if(MSVC)
     target_compile_options(m4kc PRIVATE /W4)
@@ -304,12 +385,12 @@ else()
         if(NOT WIN32)
             add_custom_command(TARGET m4kc POST_BUILD
                 COMMAND strip $<TARGET_FILE:m4kc>
-                    -S --strip-unneeded
-                    --remove-section=.note.gnu.gold-version
-                    --remove-section=.comment
-                    --remove-section=.note
-                    --remove-section=.note.gnu.build-id
-                    --remove-section=.note.ABI-tag
+                -S --strip-unneeded
+                --remove-section=.note.gnu.gold-version
+                --remove-section=.comment
+                --remove-section=.note
+                --remove-section=.note.gnu.build-id
+                --remove-section=.note.ABI-tag
                 COMMENT "Stripping binary"
             )
         endif()

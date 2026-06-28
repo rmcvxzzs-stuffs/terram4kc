@@ -1,19 +1,23 @@
 # Building TerraM4KC
 
 ## Prerequisities
+
 - Linux/MacOS/Windows with CMake 3.10+
 - MSYS2 Installed (preferrably latest version) with the PATH set up
 - A functional computer/laptop
 - A functional brain
 
 ## Guide
+
+0. You don't have to install SDL2/other libs!! The `include` headers are already vendored at `win/` (for SDL2) and their respective names (for other libraries like `discord-rpc/` and `imgui/`)
+
 1. Assuming you have cloned the repository, see below for options.
 
-| Generators            | Commands                                                |
-|-----------------------|---------------------------------------------------------|
-| Ninja                 | `cmake -B build -G Ninja -S .`                          |
-| Visual Studio 18 2026 | `cmake -B build -G "Visual Studio 18 2026" -S .`        |
-| MinGW Makefiles       | `cmake -B build -G "MinGW Makefiles" -S .`              |
+| Generators            | Commands                                         |
+| --------------------- | ------------------------------------------------ |
+| Ninja                 | `cmake -B build -G Ninja -S .`                   |
+| Visual Studio 18 2026 | `cmake -B build -G "Visual Studio 18 2026" -S .` |
+| MinGW Makefiles       | `cmake -B build -G "MinGW Makefiles" -S .`       |
 
 Build files are generated on `./build`.
 

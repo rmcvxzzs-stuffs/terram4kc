@@ -2,7 +2,7 @@
 #define NET_H
 
 #include <SDL2/SDL.h>
-#include <SDL_net.h> 
+#include <SDL_net.h>
 #include "terrain.h"
 #include "main.h"
 

@@ -1,0 +1,95 @@
+# Indonesia translation for TerraM4KC.
+# Made by rmcvxzz
+LANG_NAME=Indonesia
+# Main Menu
+MAIN_MENU_SINGLEPLAYER=Pemain Tunggal
+MAIN_MENU_OPTIONS=Pengaturan
+MAIN_MENU_MULTIPLAYER=Multi-pemain
+MAIN_MENU_QUIT=Keluar
+
+# Multiplayer Screen
+MULTIPLAYER_JOIN=Gabung Permainan
+MULTIPLAYER_HOST=Host Server
+
+# Common UI Buttons
+COMMON_CANCEL=Batal
+COMMON_OK=Ok
+COMMON_DONE=Selesai
+COMMON_UP=ATAS
+COMMON_DOWN=BAWAH
+
+# World Selection
+WORLD_SELECT_EMPTY=Tidak ada dunia
+WORLD_SELECT_NEW=Baru
+
+# Terrain Generation Names
+TERRAIN_CLASSIC=Medan Klasik
+TERRAIN_NATURAL=Medan Alami
+TERRAIN_FLAT_STONE=Batu Datar
+TERRAIN_FLAT_GRASS=Rumput Datar
+TERRAIN_WATER_WORLD=Dunia Air
+
+# Time Cycle Modes
+CYCLE_DAY_NIGHT=Siang dan Malam
+CYCLE_ALWAYS_DAY=Selalu Siang
+CYCLE_ALWAYS_NIGHT=Selalu Malam
+
+# Join Server Screen
+SERVER_JOIN_TITLE=Gabung Server
+SERVER_CONNECTING=Menghubungkan...
+SERVER_IP_LABEL=IP Server
+SERVER_CONNECT_BTN=Hubungkan
+
+# New World & Host Server Screen
+WORLD_NAME_LABEL=Nama
+WORLD_HOST_NAME_LABEL=Nama Dunia
+WORLD_SEED_LABEL=Seed
+WORLD_GENERATE_BTN=Buat
+SERVER_START_BTN=Mulai Server
+
+# Loading Screen
+LOADING_GENERATING=Membuat dunia...
+
+# Pause Menu
+PAUSE_BACK_TO_GAME=Kembali ke Permainan
+PAUSE_OPTIONS=Pengaturan...
+PAUSE_SAVE_QUIT=Simpan dan Keluar
+
+# Settings / Options Menu
+OPTIONS_USERNAME=Nama Pengguna
+OPTIONS_MOUSE_CAPTURE_OFF=Kunci Mouse: MATI
+OPTIONS_MOUSE_CAPTURE_ON=Kunci Mouse: NYALA
+OPTIONS_DRAW_DISTANCE=Jarak Pandang: %i
+OPTIONS_FOV_LOW=FOV: Rendah
+OPTIONS_FOV_MEDIUM=FOV: Sedang
+OPTIONS_FOV_HIGH=FOV: Tinggi
+OPTIONS_FOV_UNKNOWN=FOV: ?
+OPTIONS_FOG_GRADUAL=Kabut: Bertahap
+OPTIONS_FOG_SHARP=Kabut: Tajam
+
+# In-Game Chat / Messages
+CHAT_GAME_STARTED=Permainan dimulai
+CHAT_SCREENSHOT_SAVED=Tangkapan layar disimpan
+CHAT_SCREENSHOT_FAILED=Gagal menyimpan tangkapan layar
+
+# Error Messages
+ERROR_TITLE=Kesalahan:
+ERROR_REFRESH_WORLD_LIST=Gagal memuat ulang daftar dunia
+ERROR_LOAD_WORLD=Gagal memuat dunia
+ERROR_DELETE_WORLD=Gagal menghapus dunia
+ERROR_CONNECT_FAILED=Gagal terhubung ke server
+ERROR_START_SERVER=Gagal memulai server
+ERROR_SAVE_WORLD=Gagal menyimpan dunia
+ERROR_SAVE_OPTIONS=Gagal menyimpan pengaturan
+
+# Debug
+DEBUG_CHUNK_NOT_FOUND=Chunk tidak ditemukan
+
+# Discord Rich Presence
+DISCORD_MAIN_MENU=Di Menu Utama
+DISCORD_SELECTING_WORLD=Memilih Dunia
+DISCORD_CREATING_WORLD=Membuat Dunia
+DISCORD_LOADING_WORLD=Memuat Dunia
+DISCORD_SINGLEPLAYER=Bermain Pemain Tunggal
+DISCORD_IN_OPTIONS=Di Pengaturan
+DISCORD_IN_MENU=Di Menu
