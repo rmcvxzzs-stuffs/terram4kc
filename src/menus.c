@@ -13,7 +13,7 @@ static SDL_Texture *s_logo = NULL;
 
 static void loadLogo(SDL_Renderer *renderer) {
         if (s_logo)
-                return;
+                SDL_DestroyTexture(s_logo);
         s_logo = IMG_LoadTexture(renderer, "assets/textures/logo.png");
         if (!s_logo)
                 printf("Logo load failed: %s\n", IMG_GetError());

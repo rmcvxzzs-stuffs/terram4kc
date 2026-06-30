@@ -14,7 +14,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR}/output)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL ${CMAKE_BINARY_DIR}/output)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO ${CMAKE_BINARY_DIR}/output)
 
-# SDL2 finding — cross-platform
+# SDL2 finding - cross-platform
 if(WIN32)
     if(DEFINED ENV{SDL2_DIR})
         set(SDL2_DIR $ENV{SDL2_DIR})
@@ -49,7 +49,7 @@ else()
     endif()
 endif()
 
-# SDL2_net finding — bundled in win/
+# SDL2_net finding - bundled in win/
 if(WIN32)
     if(EXISTS "${CMAKE_SOURCE_DIR}/win/SDL2_net/include/SDL2/SDL_net.h")
         set(SDL2_NET_INCLUDE_DIRS "${CMAKE_SOURCE_DIR}/win/SDL2_net/include/SDL2")
@@ -174,6 +174,9 @@ set(SOURCES
     src/utility.c
     src/imgui_renderer.cpp
     src/loc.c
+    src/gl_renderer.c
+    src/mcpi.c
+    glad/src/glad.c
 )
 
 set(HEADERS
@@ -198,6 +201,8 @@ set(HEADERS
     src/discord_presence.h
     src/imgui_renderer.h
     src/loc.h
+    src/gl_renderer.h
+    src/mcpi.h
 )
 
 # Dear ImGui (SDL2 + SDLRenderer2 backends)
@@ -222,8 +227,16 @@ set_target_properties(imgui PROPERTIES LINKER_LANGUAGE CXX)
 
 add_executable(m4kc ${SOURCES} ${HEADERS})
 
-target_include_directories(m4kc PRIVATE ${SDL2_INCLUDE_DIRS} ${SDL2_NET_INCLUDE_DIRS} ${SDL2_IMAGE_INCLUDE_DIRS} src)
+target_include_directories(m4kc PRIVATE ${SDL2_INCLUDE_DIRS} ${SDL2_NET_INCLUDE_DIRS} ${SDL2_IMAGE_INCLUDE_DIRS} src glad/include)
 target_link_libraries(m4kc PRIVATE imgui ${SDL2_LIBRARIES} ${SDL2_NET_LIBRARIES} ${SDL2_IMAGE_LIBRARIES})
+
+# OpenGL
+if(WIN32)
+    target_link_libraries(m4kc PRIVATE opengl32)
+else()
+    find_package(OpenGL REQUIRED)
+    target_link_libraries(m4kc PRIVATE OpenGL::GL)
+endif()
 
 # Discord RPC compile definitions and linking
 if(TERRAM4KC_DISCORD_RPC)
@@ -276,7 +289,7 @@ if(WIN32)
         )
     endif()
 
-    # SDL2_image finding — bundled in win/
+    # SDL2_image finding - bundled in win/
     if(WIN32)
         if(EXISTS "${CMAKE_SOURCE_DIR}/win/SDL2_image/include/SDL2/SDL_image.h")
             set(SDL2_IMAGE_INCLUDE_DIRS "${CMAKE_SOURCE_DIR}/win/SDL2_image/include/SDL2")

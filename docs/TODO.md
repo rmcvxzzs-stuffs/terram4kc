@@ -10,17 +10,18 @@
 ## Internal category
 
 - [x] Discord RPC
-- [-] Debug support
-- [-] Android support (really big, 90% wont do it)
-- [?] Raycasting replacement with shaders and GLSL (might be too big)
+- [x] Debug support
+- ~~[-] Android support (really big, 90% wont do it)~~ Android support is scrapped.
+- [x] Raycasting replacement with shaders and GLSL
 - [ ] Plugin support
 - [x] Debug support
 - [ ] Dedicated server (really big, might not finish it)
-- [-] Audio support (only menu clicking is implemented)
+- [x] Audio support (using miniaudio)
+- [-] MCPI API Library support
 
 ## Gameplay category
 
-- [x] Audio support
+- [-] Audio support (only clicking on menu)
 - [ ] Biome generation (needs reworking terrain generation)
 - [-] Actual player models with textures
 - [x] Localization (system implemented, only 3 languages supported)

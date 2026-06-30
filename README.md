@@ -26,7 +26,6 @@ Simply, i am not affiliated with Sasha Koshka nor Mojang Studios.
 
 - The [build.sh](./old/build.sh) system is now retired, please do not use it for building as it was not edited! (im sorry.)
 - Expect the executable file to be above 1mb, as i integrated ImGui. (im sorry 2.)
-- There's an unused [`dpad.h`](./src/android/dpad.h). it is there as a placeholder for now.
 - TerraM4KC has localization! (english, polish and indonesia atm) if you wanna contribute, click [here.](https://poeditor.com/join/project/Hf0xcxYF7q)
 
 ~~[You can click this to see the instruction on how to build.](https://github.com/sashakoshka/m4kc/wiki/Building-From-Source)~~ Check [BUILDING.md](/BUILDING.md).

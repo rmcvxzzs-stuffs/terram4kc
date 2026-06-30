@@ -15,6 +15,8 @@
 #include "loc.h"
 #include "imgui_renderer.h"
 #include "discord_presence.h"
+#include "gl_renderer.h"
+#include "mcpi.h"
 
 /* Minecraft 4k, C edition. Version 0.7
  *
@@ -45,12 +47,19 @@ static int controlLoop(Inputs *, const uint8_t *);
 static int handleEvent(Inputs *, const uint8_t *, SDL_Event);
 
 int g_debug_mode = 0;
+int g_use_opengl = 0;
+int g_mcpi_on    = 0;
 
 int main(int argc, char *argv[]) {
-	// Parse command line arguments
 	for (int i = 1; i < argc; i++) {
 		if (strcmp(argv[i], "--debug") == 0) {
 			g_debug_mode = 1;
+		}
+		if (strcmp(argv[i], "--opengl") == 0) {
+			g_use_opengl = 1;
+		}
+		if (strcmp(argv[i], "--mcpi-on") == 0) {
+			g_mcpi_on = 1;
 		}
 	}
 
@@ -63,26 +72,33 @@ int main(int argc, char *argv[]) {
 		goto exit;
 	}
 
-	window = SDL_CreateWindow("TerraM4KC", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-	                          WINDOW_W, WINDOW_H, SDL_WINDOW_SHOWN);
+	window =
+	    SDL_CreateWindow("TerraM4KC", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WINDOW_W,
+	                     WINDOW_H, SDL_WINDOW_SHOWN | (g_use_opengl ? SDL_WINDOW_OPENGL : 0));
 	if (window == NULL) {
 		printf("%s\n", SDL_GetError());
 		goto exit;
 	}
 
-	renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
-	if (renderer == NULL) {
-		printf("%s\n", SDL_GetError());
-		goto exit;
+	if (g_use_opengl) {
+		if (gl_renderer_init(window)) {
+			printf("OpenGL renderer init failed\n");
+			goto exit;
+		}
+		printf("[main] using OpenGL 3.3 renderer\n");
+	} else {
+		renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+		if (renderer == NULL) {
+			printf("%s\n", SDL_GetError());
+			goto exit;
+		}
+		SDL_RenderSetScale(renderer, BUFFER_SCALE, BUFFER_SCALE);
+		SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 	}
-	SDL_RenderSetScale(renderer, BUFFER_SCALE, BUFFER_SCALE);
-	SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 
-#ifndef __ANDROID__
-	if (g_debug_mode) {
+	if (g_debug_mode && !g_use_opengl) {
 		imgui_init(window, renderer);
 	}
-#endif
 
 	//--- initializing modules ---//
 
@@ -112,37 +128,44 @@ int main(int argc, char *argv[]) {
 		printf("Audio init failed, continuing without sound\n");
 	}
 
-#ifndef __ANDROID__
 	err = discord_rpc_init();
 	if (err) {
 		printf("Discord RPC init failed, continuing without Discord integration\n");
 	}
-#endif
 
 	genTextures(45390874);
+
+	if (g_mcpi_on) {
+		if (mcpi_init()) {
+			printf("MCPI server init failed, continuing without it\n");
+		}
+	}
 
 	Inputs inputs = {0};
 	int running   = 1;
 	while (running) {
 		uint32_t frameStartTime = SDL_GetTicks();
 
-#ifndef __ANDROID__
-		if (g_debug_mode) {
+		if (g_debug_mode && !g_use_opengl) {
 			imgui_new_frame();
 		}
-#endif
 
 		running &= controlLoop(&inputs, keyboard);
-		running &= gameLoop(&inputs, renderer);
 
-#ifndef __ANDROID__
-		if (g_debug_mode) {
+		if (g_use_opengl) {
+			running &= gl_renderer_frame(&inputs);
+		} else {
+			running &= gameLoop(&inputs, renderer);
+		}
+
+		if (g_debug_mode && !g_use_opengl) {
 			imgui_render();
 		}
-#endif
 
-		SDL_RenderPresent(renderer);
-		SDL_UpdateWindowSurface(window);
+		if (!g_use_opengl) {
+			SDL_RenderPresent(renderer);
+			SDL_UpdateWindowSurface(window);
+		}
 
 		inputs.keyTyped = 0;
 		inputs.keySym   = 0;
@@ -154,10 +177,12 @@ int main(int argc, char *argv[]) {
 	}
 
 exit:
+	if (g_mcpi_on)
+		mcpi_quit();
 	audio_quit();
-#ifndef __ANDROID__
+	if (g_use_opengl)
+		gl_renderer_quit();
 	discord_rpc_quit();
-#endif
 	loc_quit();
 	SDL_Quit();
 	return 0;
@@ -190,7 +215,6 @@ static int controlLoop(Inputs *inputs, const Uint8 *keyboard) {
 }
 
 static int handleEvent(Inputs *inputs, const uint8_t *keyboard, SDL_Event event) {
-#ifndef __ANDROID__
 	if (g_debug_mode) {
 		imgui_process_event(&event);
 
@@ -204,7 +228,6 @@ static int handleEvent(Inputs *inputs, const uint8_t *keyboard, SDL_Event event)
 			}
 		}
 	}
-#endif
 
 	switch (event.type) {
 	case SDL_QUIT:

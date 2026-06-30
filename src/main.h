@@ -4,6 +4,8 @@
 #include <stdlib.h>
 
 extern int g_debug_mode;
+extern int g_use_opengl;
+extern int g_mcpi_on;
 
 /* InputKeys
  * Stores only key presses. Reset to zero every frame.
